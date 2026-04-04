@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "title": "ENSET Challenge Hackathon",
+    "type": "Hackathon",
+    "domain": "AI Agentic",
+    "description": "Develop autonomous agents for education or industry."
+  },
+  {
+    "id": 2,
+    "title": "Software Engineering Internship - OCP",
+    "type": "Internship",
+    "domain": "Software Engineering",
+    "description": "Full-stack development role in Casablanca."
+  }
+]
