@@ -1,0 +1,116 @@
+[
+  {
+    "id": "software-engineering",
+    "title": "Software Engineering",
+    "shortDescription": "Build web, mobile and backend systems for real users.",
+    "tags": ["software", "coding", "web", "apps", "problem solving", "logic", "tech"],
+    "strengthTags": ["problem solving", "logic", "analysis", "teamwork", "attention to detail"],
+    "causeTags": ["education", "health", "accessibility", "community"],
+    "fieldTags": ["software", "math", "science", "engineering"],
+    "goalKeywords": ["build", "app", "platform", "software", "engineer", "developer"],
+    "valueTags": ["stability", "impact", "growth"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "medium",
+    "recommendedOpportunities": ["hackathons", "projects", "internships", "bootcamps"],
+    "roadmap": {
+      "first30Days": ["Choose one stack: web or mobile.", "Build one small portfolio project.", "Practice Git and GitHub workflow."],
+      "next60Days": ["Join a hackathon or coding sprint.", "Add backend or database to your project.", "Start applying to beginner internships."],
+      "next90Days": ["Ship a polished project with README.", "Contribute to one open-source issue.", "Prepare technical interview basics."]
+    }
+  },
+  {
+    "id": "data-and-ai",
+    "title": "Data & AI",
+    "shortDescription": "Work on intelligent systems, analytics and machine learning.",
+    "tags": ["ai", "data", "math", "research", "analysis", "python", "modeling", "tech"],
+    "strengthTags": ["analysis", "math", "research", "problem solving"],
+    "causeTags": ["education", "health", "environment", "industry"],
+    "fieldTags": ["math", "science", "software", "engineering"],
+    "goalKeywords": ["ai", "data", "intelligence", "prediction", "automation", "models"],
+    "valueTags": ["impact", "growth", "innovation"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "hard",
+    "recommendedOpportunities": ["hackathons", "research", "projects", "bootcamps"],
+    "roadmap": {
+      "first30Days": ["Revise Python and statistics basics.", "Create one small data analysis notebook.", "Learn how datasets are cleaned and visualized."],
+      "next60Days": ["Build a mini AI or prediction project.", "Join an AI competition or hackathon.", "Learn model evaluation and experimentation."],
+      "next90Days": ["Publish a portfolio case study.", "Target AI or data internships.", "Practice explaining your models clearly."]
+    }
+  },
+  {
+    "id": "cybersecurity",
+    "title": "Cybersecurity",
+    "shortDescription": "Protect systems, networks and users against digital threats.",
+    "tags": ["security", "cyber", "networks", "logic", "tech", "investigation"],
+    "strengthTags": ["logic", "attention to detail", "analysis", "curiosity"],
+    "causeTags": ["privacy", "safety", "community", "finance"],
+    "fieldTags": ["software", "math", "science", "engineering"],
+    "goalKeywords": ["security", "protect", "privacy", "cyber", "defense"],
+    "valueTags": ["stability", "impact", "challenge"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "hard",
+    "recommendedOpportunities": ["projects", "bootcamps", "internships"],
+    "roadmap": {
+      "first30Days": ["Learn networking and Linux basics.", "Practice security labs safely.", "Understand common web vulnerabilities."],
+      "next60Days": ["Complete one security challenge platform track.", "Document a simple security audit project.", "Follow security news and incident reports."],
+      "next90Days": ["Build a portfolio with lab writeups.", "Join a security community or CTF.", "Apply to beginner security internships."]
+    }
+  },
+  {
+    "id": "ui-ux-design",
+    "title": "UI/UX Design",
+    "shortDescription": "Design digital experiences that are useful, clear and enjoyable.",
+    "tags": ["design", "ux", "ui", "creative", "product", "research", "accessibility"],
+    "strengthTags": ["creativity", "communication", "empathy", "research"],
+    "causeTags": ["education", "accessibility", "health", "community"],
+    "fieldTags": ["design", "software", "media", "communication"],
+    "goalKeywords": ["design", "experience", "interface", "product", "creative"],
+    "valueTags": ["creativity", "impact", "freedom"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "bootcamps", "internships"],
+    "roadmap": {
+      "first30Days": ["Study design principles and accessibility.", "Redesign one app screen or flow.", "Learn Figma basics."],
+      "next60Days": ["Create one case study from problem to prototype.", "Collect user feedback and iterate.", "Join a product or design challenge."],
+      "next90Days": ["Publish 2 to 3 portfolio case studies.", "Collaborate with a developer on a real prototype.", "Apply to design internships or freelance projects."]
+    }
+  },
+  {
+    "id": "product-management",
+    "title": "Product Management & Entrepreneurship",
+    "shortDescription": "Turn ideas into products by combining user needs, business logic and execution.",
+    "tags": ["product", "business", "startup", "leadership", "strategy", "communication"],
+    "strengthTags": ["communication", "leadership", "organization", "analysis", "teamwork"],
+    "causeTags": ["education", "community", "finance", "health"],
+    "fieldTags": ["business", "software", "communication", "management"],
+    "goalKeywords": ["startup", "business", "lead", "product", "company", "entrepreneur"],
+    "valueTags": ["freedom", "growth", "impact"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "medium",
+    "recommendedOpportunities": ["hackathons", "projects", "bootcamps", "internships"],
+    "roadmap": {
+      "first30Days": ["Pick one problem space you care about.", "Interview potential users.", "Write a one-page product brief."],
+      "next60Days": ["Validate an MVP idea with a simple prototype.", "Learn product metrics and prioritization.", "Join a startup or innovation challenge."],
+      "next90Days": ["Ship a small MVP with a team.", "Document learnings from user feedback.", "Apply to product or startup programs."]
+    }
+  },
+  {
+    "id": "digital-marketing",
+    "title": "Digital Marketing & Content",
+    "shortDescription": "Grow audiences and brands through strategy, storytelling and digital channels.",
+    "tags": ["marketing", "content", "branding", "communication", "social media", "creative"],
+    "strengthTags": ["communication", "creativity", "organization", "analysis"],
+    "causeTags": ["community", "education", "commerce"],
+    "fieldTags": ["business", "communication", "media"],
+    "goalKeywords": ["content", "brand", "marketing", "audience", "growth"],
+    "valueTags": ["creativity", "freedom", "growth"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "roadmap": {
+      "first30Days": ["Choose one niche and analyze strong brands.", "Create sample content pieces.", "Learn analytics basics."],
+      "next60Days": ["Run a small campaign for a project or club.", "Measure engagement and iterate.", "Build a mini portfolio with results."],
+      "next90Days": ["Apply to marketing internships.", "Offer content strategy for a student association or startup.", "Document growth experiments."]
+    }
+  }
+]
