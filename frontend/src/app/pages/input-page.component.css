@@ -502,6 +502,27 @@
   line-height: 1.72;
 }
 
+.form-group--invalid.field-card,
+.form-group--invalid.analysis-card,
+.form-group--invalid.goal-card {
+  border-color: rgba(180, 84, 84, 0.24);
+}
+
+.form-group--invalid .field-control,
+.form-group--invalid .choice-row__surface,
+.form-group--invalid .segment-card__surface,
+.form-group--invalid .value-chip__surface {
+  border-color: rgba(180, 84, 84, 0.38);
+  box-shadow: 0 0 0 3px rgba(180, 84, 84, 0.08);
+}
+
+.field-error {
+  margin: 12px 0 0;
+  color: #b45454;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .analysis-textarea {
   min-height: 148px;
   resize: vertical;
@@ -671,6 +692,10 @@
 
 .analysis-final__status--error {
   color: #b45454;
+}
+
+.analysis-final__status--success {
+  color: var(--color-primary-green);
 }
 
 @media (max-width: 960px) {
