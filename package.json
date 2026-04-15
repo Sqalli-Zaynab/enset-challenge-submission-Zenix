@@ -1,10 +1,6 @@
-{
-  "name": "zenix-hackathon-workspace",
-  "private": true,
-  "scripts": {
-    "dev": "npm --prefix frontend start",
-    "dev:frontend": "npm --prefix frontend start",
-    "dev:backend": "npm --prefix backend start",
-    "build:frontend": "npm --prefix frontend run build"
-  }
+"dependencies": {
+  "helmet": "^7.0.0",
+  "express-rate-limit": "^7.0.0",
+  "winston": "^3.11.0",
+  "jsonwebtoken": "^9.0.0"
 }
