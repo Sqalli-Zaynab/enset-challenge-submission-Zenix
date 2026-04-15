@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+// ------------------------------------------------------------
+// EXTENDED STATE with RAG and HITL fields
+// ------------------------------------------------------------
 const State = Annotation.Root({
   mode: Annotation({
     reducer: (_left, right) => right,
@@ -38,6 +40,24 @@ const State = Annotation.Root({
   trace: Annotation({
     reducer: (left, right) => left.concat(right || []),
     default: () => [],
+  }),
+  // NEW: RAG fields
+  ragContext: Annotation({
+    reducer: (_left, right) => right,
+    default: () => [],
+  }),
+  // NEW: HITL fields
+  humanApprovalNeeded: Annotation({
+    reducer: (_left, right) => right,
+    default: () => false,
+  }),
+  pendingAction: Annotation({
+    reducer: (_left, right) => right,
+    default: () => null,
+  }),
+  userApproval: Annotation({
+    reducer: (_left, right) => right,
+    default: () => null, // 'approved', 'rejected', or null
   }),
 });
 
@@ -168,7 +188,7 @@ function buildProfileNode(state) {
 
 function routeFromMode(state) {
   if (state.mode === "analyze") return "diagnoseProfile";
-  if (state.mode === "plan") return "buildPlan";
+  if (state.mode === "plan") return "retrieveRAG";   // CHANGED: go to RAG first
   return "scoreCareers";
 }
 
@@ -325,11 +345,61 @@ function formatCareer(career) {
   };
 }
 
+// ------------------------------------------------------------
+// NEW: RAG Node (Agentic Retrieval)
+// ------------------------------------------------------------
+async function retrieveRAGNode(state) {
+  const { ragService } = await import("../services/rag.service.js");
+  const profile = state.profile;
+  const query = `Career guidance for someone with interests in ${profile.interests.join(", ")} and strengths in ${profile.strengths.join(", ")}. Personal goal: ${profile.personalGoal}`;
+  
+  const ragContext = await ragService.query(query, topK = 3);
+  
+  return {
+    ragContext,
+    trace: [`RAGAgent: retrieved ${ragContext.length} relevant documents from knowledge base`],
+  };
+}
+
+// ------------------------------------------------------------
+// NEW: Human-in-the-Loop Checkpoint Node
+// ------------------------------------------------------------
+async function humanCheckpointNode(state) {
+  // If user already approved, skip pause
+  if (state.userApproval === "approved") {
+    return { humanApprovalNeeded: false, pendingAction: null, userApproval: null };
+  }
+  if (state.userApproval === "rejected") {
+    return { humanApprovalNeeded: false, pendingAction: null, userApproval: null, plan: null };
+  }
+
+  // First time: pause and wait for approval
+  const pendingPlan = state.plan;
+  if (pendingPlan && !state.humanApprovalNeeded) {
+    return {
+      humanApprovalNeeded: true,
+      pendingAction: {
+        type: "APPROVE_PLAN",
+        data: {
+          selectedPath: pendingPlan.selectedPath,
+          roadmap: pendingPlan.roadmap,
+          recommendedOpportunitiesCount: pendingPlan.recommendedOpportunities?.length,
+        },
+      },
+    };
+  }
+  return state;
+}
+
+// ------------------------------------------------------------
+// MODIFIED: buildPlanNode with RAG context
+// ------------------------------------------------------------
 async function buildPlanNode(state) {
   const careers = await readJson(CAREERS_PATH);
   const opportunities = await readJson(OPPORTUNITIES_PATH);
   const payload = state.payload || {};
   const profile = state.profile;
+  const ragContext = state.ragContext || [];
 
   const selectedId = payload.selectedCareerId || payload.selectedPath || payload.careerId;
   const selectedCareer = careers.find(
@@ -339,7 +409,7 @@ async function buildPlanNode(state) {
   const preferredTypes = normalizeArray(payload.opportunityTypes || profile.opportunityTypes);
   const preferredLocation = normalizeText(payload.preferredLocation || profile.preferredLocation || "remote").toLowerCase();
 
-  const filteredOpportunities = opportunities
+  let filteredOpportunities = opportunities
     .filter((item) => {
       const typeOk = preferredTypes.length ? preferredTypes.includes(String(item.type).toLowerCase()) : true;
       const locationOk = preferredLocation ? item.location.toLowerCase() === preferredLocation || item.location.toLowerCase() === "flexible" : true;
@@ -347,6 +417,12 @@ async function buildPlanNode(state) {
       return typeOk && locationOk && tagOk;
     })
     .slice(0, 5);
+
+  // If RAG context exists, enhance the plan explanation
+  let ragEnhancedExplanation = "";
+  if (ragContext.length > 0) {
+    ragEnhancedExplanation = `\n\nAdditional context from knowledge base: ${ragContext.map(c => c.content).join(" ").substring(0, 500)}`;
+  }
 
   const plan = {
     selectedPath: {
@@ -360,7 +436,7 @@ async function buildPlanNode(state) {
       next90Days: selectedCareer.roadmap.next90Days,
     },
     recommendedOpportunities: filteredOpportunities,
-    explanation: `This plan focuses on ${selectedCareer.title} because it aligns with your strongest signals and keeps the next steps concrete.`,
+    explanation: `This plan focuses on ${selectedCareer.title} because it aligns with your strongest signals and keeps the next steps concrete.${ragEnhancedExplanation}`,
   };
 
   return {
@@ -368,29 +444,62 @@ async function buildPlanNode(state) {
     trace: [
       `PlannerAgent: built a 30-60-90 day roadmap for ${selectedCareer.title}`,
       `OpportunitiesAgent: found ${filteredOpportunities.length} matching opportunities`,
-    ],
+      ragContext.length ? `RAGAgent: enriched plan with ${ragContext.length} external documents` : null,
+    ].filter(Boolean),
   };
 }
 
+// ------------------------------------------------------------
+// CONDITIONAL ROUTING AFTER HITL
+// ------------------------------------------------------------
+function afterHumanCheckpoint(state) {
+  if (state.humanApprovalNeeded) {
+    // This will cause the graph to pause (we'll handle via checkpointer)
+    return "humanCheckpoint";
+  }
+  if (state.userApproval === "rejected") {
+    return END;
+  }
+  return END;
+}
+
+// ------------------------------------------------------------
+// BUILD THE GRAPH (with new nodes)
+// ------------------------------------------------------------
 const graph = new StateGraph(State)
   .addNode("buildProfile", buildProfileNode)
   .addNode("diagnoseProfile", diagnoseProfileNode)
   .addNode("scoreCareers", scoreCareersNode)
   .addNode("selectRecommendations", selectRecommendationsNode)
-  .addNode("buildPlan", buildPlanNode)
+  .addNode("retrieveRAG", retrieveRAGNode)           // NEW
+  .addNode("buildPlan", buildPlanNode)               // MODIFIED
+  .addNode("humanCheckpoint", humanCheckpointNode)   // NEW
+
   .addEdge(START, "buildProfile")
-  .addConditionalEdges("buildProfile", routeFromMode, ["diagnoseProfile", "scoreCareers", "buildPlan"])
+  .addConditionalEdges("buildProfile", routeFromMode, ["diagnoseProfile", "retrieveRAG", "scoreCareers"])
+  
+  // For "plan" mode: after RAG, buildPlan, then humanCheckpoint
+  .addEdge("retrieveRAG", "buildPlan")
+  .addEdge("buildPlan", "humanCheckpoint")
+  .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
+  
   .addEdge("diagnoseProfile", END)
   .addEdge("scoreCareers", "selectRecommendations")
   .addEdge("selectRecommendations", END)
-  .addEdge("buildPlan", END)
   .compile();
 
-export async function runAgentGraph(mode = "recommend", payload = {}) {
-  const result = await graph.invoke({
+// ------------------------------------------------------------
+// EXPORT (same as before, but with optional HITL resume)
+// ------------------------------------------------------------
+export async function runAgentGraph(mode = "recommend", payload = {}, userApproval = null, config = {}) {
+  const input = {
     mode,
     payload,
-  });
+    userApproval: userApproval || null,
+  };
+
+  // If resuming after HITL, we need to pass the thread_id via config
+  const result = await graph.invoke(input, config);
 
   if (mode === "analyze") {
     return {
@@ -401,6 +510,14 @@ export async function runAgentGraph(mode = "recommend", payload = {}) {
   }
 
   if (mode === "plan") {
+    // If waiting for human approval, return the pending action
+    if (result.humanApprovalNeeded) {
+      return {
+        status: "awaiting_approval",
+        pendingAction: result.pendingAction,
+        agentTrace: result.trace,
+      };
+    }
     return {
       profile: result.profile,
       ...result.plan,
