@@ -4,7 +4,7 @@ exports.runProfileAnalysis = async (profileData) => {
 };
 
 exports.runCareerRecommendation = async (profileData) => {
-  const { runAgentGraph } = await import("../agent/graph.mjs");
+ const { runAgentGraph } = await import("../agent/graph.mjs");
   return runAgentGraph("recommend", profileData);
 };
 

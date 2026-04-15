@@ -1,0 +1,20 @@
+ENSEIRB-MATMECA Curriculum - Computer Science Track
+
+Core Courses:
+- Algorithmics and Data Structures (4 credits)
+- Object-Oriented Programming - Java (3 credits)
+- Databases - SQL and NoSQL (4 credits)
+- Web Development - React and Node.js (3 credits)
+- Artificial Intelligence - Machine Learning (4 credits)
+- Software Engineering and DevOps (3 credits)
+
+Elective Courses:
+- Cloud Computing and Big Data
+- Cybersecurity and Cryptography
+- Mobile Development - React Native
+- Computer Vision and NLP
+
+Prerequisites:
+- Strong foundation in mathematics
+- Basic programming knowledge (Python or Java)
+- Database concepts
