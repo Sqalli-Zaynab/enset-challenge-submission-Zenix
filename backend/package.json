@@ -1,6 +1,6 @@
 {
   "name": "zenix-hackathon-backend",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Node API and AI agent for the Zenix Hackathon project",
   "main": "app.js",
@@ -8,9 +8,6 @@
   "scripts": {
     "start": "node app.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@langchain/core": "^1.1.39",
     "@langchain/langgraph": "^1.2.7",
@@ -20,6 +17,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
     "groq-sdk": "^0.31.0",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^3.24.1"
   }
 }

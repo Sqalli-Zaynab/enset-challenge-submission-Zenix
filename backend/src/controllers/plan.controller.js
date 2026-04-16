@@ -1,12 +1,11 @@
-// backend/src/controllers/plan.controller.js
-import aiService from "../services/ai.service.js";
+import { reviewPlanDecision } from "../services/plan-review.service.js";
 
-export const generatePlan = async (req, res) => {
+export const submitPlanDecision = async (req, res) => {
   try {
-    const result = await aiService.generatePlan(req.body);
+    const result = reviewPlanDecision(req.validatedBody);
     res.json(result);
   } catch (error) {
-    console.error("Plan generation error:", error);
+    console.error("Plan decision error:", error);
     res.status(500).json({ error: error.message });
   }
 };
