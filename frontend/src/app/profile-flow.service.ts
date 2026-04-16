@@ -499,7 +499,7 @@ export class ProfileFlowService {
 
     if (typeof (response as any).threadId === 'string' && (response as any).threadId.trim()) {
       this.chatThreadId.set((response as any).threadId);
-    }
+ }
 
     if (Array.isArray((response as any).messages)) {
       this.chatMessages.set((response as any).messages);
