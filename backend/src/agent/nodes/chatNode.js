@@ -53,7 +53,7 @@ export async function chatNode(state) {
   if (!userMessage) {
     let welcome;
     if (previousMessages.length === 0) {
-      welcome = "Hi! I'm your Moroccan university advisor. Tell me about your interests and what you'd like to study.";
+      welcome = "Tell me about yourself: what are you studying, what are you curious about, and what kind of future are you trying to understand?";
     } else if (currentPhase === PHASES.GENERAL) {
       welcome = 'What field are you interested in? (Medicine, Engineering, Business, Law, Arts)';
     } else if (currentPhase === PHASES.SPECIFIC) {

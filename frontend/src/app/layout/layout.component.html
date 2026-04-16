@@ -1,9 +1,9 @@
-<div class="app-shell">
-  <app-header></app-header>
+﻿<div class="app-shell" [class.app-shell--product]="isProductRoute()">
+  <app-header *ngIf="!isProductRoute()"></app-header>
 
   <main class="app-main">
     <router-outlet></router-outlet>
   </main>
 
-  <app-footer></app-footer>
+  <app-footer *ngIf="!isProductRoute()"></app-footer>
 </div>

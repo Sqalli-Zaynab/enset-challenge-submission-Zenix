@@ -1,70 +1,69 @@
-<div class="analysis-page">
-  <main class="analysis-page__main dynamic-interview">
-    <section class="analysis-intro dynamic-interview__hero">
-      <div class="container dynamic-interview__hero-inner">
-        <span class="analysis-intro__label">DYNAMIC AI INTERVIEW</span>
-        <h1 class="analysis-intro__title">
-          <span class="analysis-intro__title-line">One question at a time.</span>
-          <span class="analysis-intro__title-line">Each next question depends on your answer.</span>
-        </h1>
-        <p class="analysis-intro__copy">
-          The assistant asks a single question, reads your answer, then generates the next one
-          using the backend agent flow.
-        </p>
+<div class="interview-page" [class.interview-page--initial]="isInitialState()">
+  <header class="interview-topbar">
+    <a class="interview-logo" routerLink="/" aria-label="Back to Afaq landing page">
+      <app-afaq-logo></app-afaq-logo>
+    </a>
+
+    <div class="interview-progress" [attr.aria-label]="progressText()">
+      <span class="sr-only">{{ progressText() }}</span>
+      <span
+        *ngFor="let step of progressSteps(); trackBy: trackByIndex"
+        class="interview-progress__dot"
+        [class.interview-progress__dot--done]="step.isDone"
+        [class.interview-progress__dot--active]="step.isActive"
+      ></span>
+    </div>
+  </header>
+
+  <main class="interview-shell" aria-label="Afaq guided interview">
+    <section #thread class="interview-thread">
+      <p class="interview-intro" *ngIf="isInitialState()">
+        Let&rsquo;s turn uncertainty into direction.
+      </p>
+
+      <div
+        *ngFor="let message of visibleMessages(); trackBy: trackByIndex"
+        class="interview-message"
+        [ngClass]="{
+          'interview-message--assistant': message.role === 'assistant',
+          'interview-message--user': message.role === 'user',
+          'interview-message--question': message.tone === 'question',
+          'interview-message--thinking': message.tone === 'thinking'
+        }"
+      >
+        <p>{{ message.content }}</p>
       </div>
     </section>
 
-    <section class="container dynamic-interview__panel-wrap">
-      <article class="dynamic-interview__panel panel surface-card">
-        <p class="dynamic-interview__step">Current question</p>
-
-        <p class="dynamic-interview__question" *ngIf="question() as q">
-          {{ q }}
-        </p>
-
-        <p class="dynamic-interview__question" *ngIf="!question()">
-          Preparing your first question...
-        </p>
-
-        <label class="dynamic-interview__label" for="answer">
-          Your answer
-        </label>
-
-        <textarea
-          id="answer"
-          class="analysis-textarea dynamic-interview__textarea"
-          [value]="answer()"
-          [disabled]="isBusy()"
-          (input)="answer.set($any($event.target).value)"
-          placeholder="Write your answer here..."
-        ></textarea>
-
-        <div class="dynamic-interview__errors" *ngIf="chatError() || submitError()">
-          <p class="field-error" *ngIf="chatError() as error">{{ error }}</p>
-          <p class="field-error" *ngIf="submitError() as error">{{ error }}</p>
-        </div>
-
-        <div class="dynamic-interview__actions">
-          <button
-            class="btn btn--secondary"
-            type="button"
+    <footer class="interview-composer" aria-label="Answer composer">
+      <div class="interview-composer__inner">
+        <div class="interview-input-wrap" [class.interview-input-wrap--busy]="isBusy()">
+          <textarea
+            [value]="answer()"
             [disabled]="isBusy()"
-            (click)="startInterview()"
-          >
-            Restart
-          </button>
+            (input)="answer.set($any($event.target).value); localError.set(null)"
+            placeholder="Reply naturally..."
+            aria-label="Your answer"
+            rows="1"
+          ></textarea>
 
           <button
-            class="btn btn--green"
             type="button"
-            [disabled]="isBusy() || !answer().trim()"
-            (click)="nextQuestion()"
+            class="interview-send"
+            [disabled]="isBusy()"
+            (click)="sendAnswer()"
+            aria-label="Send answer"
           >
-            <span *ngIf="!isBusy()">Next</span>
-            <span *ngIf="isBusy()">Thinking...</span>
+            <span class="sr-only">{{ isBusy() ? 'Afaq is thinking' : 'Send answer' }}</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" focusable="false">
+              <path d="M10 15.5V4.8"></path>
+              <path d="M5.8 8.9 10 4.7l4.2 4.2"></path>
+            </svg>
           </button>
         </div>
-      </article>
-    </section>
+
+        <p class="interview-error" *ngIf="displayedError() as message">{{ message }}</p>
+      </div>
+    </footer>
   </main>
 </div>

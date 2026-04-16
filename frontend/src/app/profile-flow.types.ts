@@ -159,6 +159,7 @@ export interface ChatCollectingResponse {
   response: string;
   messages: ChatMessage[];
   collectedInfo: ChatCollectedInfo;
+  threadId?: string;
   agentTrace?: string[];
 }
 
@@ -167,6 +168,7 @@ export interface ChatPlanReadyResponse {
   plan: Record<string, unknown>;
   messages: ChatMessage[];
   collectedInfo: ChatCollectedInfo;
+  threadId?: string;
   agentTrace?: string[];
 }
 
@@ -175,6 +177,7 @@ export interface ChatAwaitingApprovalResponse {
   pendingAction?: unknown;
   messages?: ChatMessage[];
   collectedInfo?: ChatCollectedInfo;
+  threadId?: string;
   agentTrace?: string[];
 }
 

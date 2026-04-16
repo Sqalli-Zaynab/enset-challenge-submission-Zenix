@@ -67,6 +67,7 @@ export class ProfileFlowService {
   readonly chatMessages = signal<ChatMessage[]>([]);
   readonly chatCollectedInfo = signal<ChatCollectedInfo>({});
   readonly currentQuestion = signal<string>('');
+  readonly chatThreadId = signal<string | null>(null);
   readonly isChatLoading = signal(false);
   readonly chatError = signal<string | null>(null);
 
@@ -189,6 +190,7 @@ export class ProfileFlowService {
     this.chatMessages.set([]);
     this.chatCollectedInfo.set({});
     this.currentQuestion.set('');
+    this.chatThreadId.set(null);
     this.isChatLoading.set(false);
     this.chatError.set(null);
   }
@@ -485,10 +487,15 @@ export class ProfileFlowService {
       const response = await firstValueFrom(
         this.http.post<ChatAdvisorResponse>(`${this.apiBaseUrl}/chat/message`, {
           message,
+          threadId: this.chatThreadId(),
           messages: this.chatMessages(),
           collectedInfo: this.chatCollectedInfo(),
         }),
       );
+
+      if (typeof response.threadId === 'string' && response.threadId.trim()) {
+        this.chatThreadId.set(response.threadId);
+      }
 
       if (Array.isArray((response as any).messages)) {
         this.chatMessages.set((response as any).messages);

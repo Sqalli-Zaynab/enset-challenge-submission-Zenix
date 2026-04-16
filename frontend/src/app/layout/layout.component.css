@@ -1,4 +1,4 @@
-:host {
+﻿:host {
   display: block;
   min-height: 100%;
 }
@@ -7,6 +7,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.app-shell--product {
+  margin-top: -84px;
 }
 
 .app-main {
