@@ -1,7 +1,7 @@
 // agent/nodes/chatNode.js
 // Conversational node that asks sequential questions to build a rich user profile
 
-import { generateChatCompletion } from "../../backend/services/groq.service.js";
+import { generateChatCompletion } from "../../services/groq.service.js";
 
 // Define the list of questions to ask (order matters)
 const INTERVIEW_QUESTIONS = [

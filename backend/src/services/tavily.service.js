@@ -1,34 +1,17 @@
-// backend/services/tavily.service.js
-const { TavilySearch } = require("@langchain/tavily");
+import { TavilySearchResults } from "@langchain/tavily";
 
-let tavilyTool = null;
+const tavily = new TavilySearchResults({
+  apiKey: process.env.TAVILY_API_KEY,
+  maxResults: 10,
+  includeAnswer: true,
+});
 
-function getTavilyTool() {
-  if (!process.env.TAVILY_API_KEY) {
-    throw new Error("TAVILY_API_KEY is missing");
-  }
-
-  if (!tavilyTool) {
-    tavilyTool = new TavilySearch({
-      apiKey: process.env.TAVILY_API_KEY,
-      maxResults: 5,
-    });
-  }
-
-  return tavilyTool;
-}
-
-async function searchUniversities(query) {
+export async function searchMoroccanUniversities(query) {
   try {
-    const tool = getTavilyTool();
-    const results = await tool.invoke(query);
-    return results;
+    const results = await tavily.invoke(query);
+    return results.map(r => ({ title: r.title, url: r.url, content: r.content }));
   } catch (error) {
-    console.error("Tavily search error:", error);
+    console.error("Tavily error:", error);
     return [];
   }
 }
-
-module.exports = {
-  searchUniversities,
-};

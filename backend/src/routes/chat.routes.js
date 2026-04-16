@@ -1,16 +1,16 @@
-const express = require("express");
-const router = express.Router();
-const aiService = require("../services/ai.service");
+import express from 'express';
+import { runAgentGraph } from '../../../agent/graph.js';
 
-router.post("/message", async (req, res) => {
-	try {
-		const payload = req.body || {};
-		const response = await aiService.runChatAdvisor(payload);
-		return res.status(200).json(response);
-	} catch (error) {
-		console.error("Chat advisor failed:", error);
-		return res.status(500).json({ error: "Chat advisor failed" });
-	}
+const router = express.Router();
+
+router.post('/', async (req, res) => {
+  const { message, threadId } = req.body;
+  const result = await runAgentGraph('chat', { message }, null, threadId || crypto.randomUUID());
+  
+  res.json({
+    ...result,
+    threadId: threadId || result.threadId,
+  });
 });
 
-module.exports = router;
+export default router;
