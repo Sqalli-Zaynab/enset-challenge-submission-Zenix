@@ -1,6 +1,16 @@
-"dependencies": {
-  "helmet": "^7.0.0",
-  "express-rate-limit": "^7.0.0",
-  "winston": "^3.11.0",
-  "jsonwebtoken": "^9.0.0"
+{
+  "name": "enset-challenge-submission-zenix",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:backend": "npm --prefix backend start",
+    "dev:frontend": "npm --prefix frontend start",
+    "dev": "npm --prefix frontend start"
+  },
+  "dependencies": {
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^7.0.0",
+    "winston": "^3.11.0",
+    "jsonwebtoken": "^9.0.0"
+  }
 }

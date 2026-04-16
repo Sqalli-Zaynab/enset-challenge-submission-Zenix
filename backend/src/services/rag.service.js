@@ -1,7 +1,7 @@
 // This is the RAG service your friend's agent is importing
 // It can be MOCK for now (no API keys needed)
 
-const logger = require('../utils/logger'); // Adjust path as needed
+const logger = require('../../utils/logger');
 
 // MOCK RAG service - no API keys required
 async function query(question, topK = 3) {

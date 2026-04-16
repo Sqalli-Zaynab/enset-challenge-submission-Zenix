@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Import all external nodes
-import { profileNode } from "./nodes/profileNode.js";
+import { profileNode } from "./nodes/profilesNode.js";
 import { ragNode } from "./nodes/ragNode.js";
 import { planNode } from "./nodes/planNode.js";
 import { humanCheckpointNode } from "./nodes/humanCheckpointNode.js";
@@ -315,17 +315,12 @@ function routeFromMode(state) {
 }
 
 function routeAfterChat(state) {
-  // After chat, if profile is complete, go to search, else continue chat
-  return state.profileComplete ? "searchNode" : "chatNode";
+  // After one chat turn, either continue to search (if complete) or end and wait for next user message.
+  return state.profileComplete ? "searchNode" : END;
 }
 
 function afterHumanCheckpoint(state) {
-  if (state.humanApprovalNeeded) {
-    return "humanCheckpoint";
-  }
-  if (state.userApproval === "rejected") {
-    return END;
-  }
+  // End the run after checkpoint state is produced to avoid self-loop recursion.
   return END;
 }
 
@@ -358,7 +353,7 @@ const graph = new StateGraph(State)
   ])
 
   // Chat mode flow
-  .addConditionalEdges("chatNode", routeAfterChat, ["chatNode", "searchNode"])
+  .addConditionalEdges("chatNode", routeAfterChat, ["searchNode", END])
   .addEdge("searchNode", "buildPlan")          // After search, generate plan
   .addEdge("buildPlan", "humanCheckpoint")     // Then HITL approval
   .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
@@ -379,6 +374,8 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
     mode,
     payload,
     userApproval: userApproval || null,
+    messages: Array.isArray(payload?.messages) ? payload.messages : [],
+    collectedInfo: payload?.collectedInfo && typeof payload.collectedInfo === "object" ? payload.collectedInfo : {},
   };
 
   const result = await graph.invoke(input, config);
@@ -420,6 +417,8 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
       return {
         status: "collecting",
         response: result.nextQuestion,
+        messages: result.messages,
+        collectedInfo: result.collectedInfo,
         agentTrace: result.trace,
       };
     }
@@ -427,6 +426,8 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
     return {
       status: "plan_ready",
       plan: result.plan,
+      messages: result.messages,
+      collectedInfo: result.collectedInfo,
       agentTrace: result.trace,
     };
   }

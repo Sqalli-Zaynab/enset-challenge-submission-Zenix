@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 async function generateResponse(prompt, systemPrompt = null) {
   logger.logAI('LLM_REQUEST', { prompt: prompt.substring(0, 200) });

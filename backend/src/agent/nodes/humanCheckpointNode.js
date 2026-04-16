@@ -2,6 +2,15 @@
 // LangGraph node for Human-in-the-Loop checkpoint
 
 export async function humanCheckpointNode(state) {
+  // Frontend plan API expects an immediate plan response, so skip HITL pause here.
+  if (state.mode === "plan" || state.mode === "chat") {
+    return {
+      humanApprovalNeeded: false,
+      pendingAction: null,
+      userApproval: null,
+    };
+  }
+
   // If user already approved, skip pause
   if (state.userApproval === "approved") {
     return { 

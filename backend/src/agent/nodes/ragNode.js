@@ -1,7 +1,7 @@
 // agent/nodes/ragNode.js
 // LangGraph node for Agentic RAG (using real backend service)
 
-import { ragService } from "../../backend/services/rag.service.js";
+import ragService from "../../services/rag.service.js";
 
 export async function ragNode(state) {
   const profile = state.profile;

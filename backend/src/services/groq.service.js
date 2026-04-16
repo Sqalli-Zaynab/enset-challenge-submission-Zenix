@@ -1,9 +1,21 @@
 // backend/services/groq.service.js
-import Groq from "groq-sdk";
+const Groq = require("groq-sdk");
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+let groqClient = null;
+
+function getGroqClient() {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is missing");
+  }
+
+  if (!groqClient) {
+    groqClient = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    });
+  }
+
+  return groqClient;
+}
 
 // Available models on Groq's free tier:
 // - "llama-3.3-70b-versatile" (best quality, ~70B params)
@@ -16,8 +28,9 @@ const DEFAULT_MODEL = "llama-3.3-70b-versatile";
  * @param {Object} options - Optional parameters (temperature, model, etc.)
  * @returns {Promise<string>} - The assistant's response
  */
-export async function generateChatCompletion(messages, options = {}) {
+async function generateChatCompletion(messages, options = {}) {
   try {
+    const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
       messages: messages,
       model: options.model || DEFAULT_MODEL,
@@ -38,7 +51,7 @@ export async function generateChatCompletion(messages, options = {}) {
  * @param {string} schema - JSON schema for extraction
  * @returns {Promise<Object>} - Extracted structured data
  */
-export async function extractStructuredData(messages, schema) {
+async function extractStructuredData(messages, schema) {
   const extractionPrompt = `
     You are a data extraction assistant. Extract the requested information from the conversation.
     Return ONLY valid JSON matching this schema:
@@ -57,3 +70,8 @@ export async function extractStructuredData(messages, schema) {
   const cleanedResponse = response.replace(/```json\n?/g, "").replace(/```\n?/g, "");
   return JSON.parse(cleanedResponse);
 }
+
+module.exports = {
+  generateChatCompletion,
+  extractStructuredData,
+};

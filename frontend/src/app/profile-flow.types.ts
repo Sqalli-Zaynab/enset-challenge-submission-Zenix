@@ -141,6 +141,48 @@ export interface PlanGenerateResponse extends PlanResult {
   agentTrace: string[];
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatCollectedInfo {
+  fieldOfInterest?: string;
+  goal?: string;
+  academicLevel?: string;
+  preferredRegion?: string;
+  [key: string]: unknown;
+}
+
+export interface ChatCollectingResponse {
+  status: 'collecting';
+  response: string;
+  messages: ChatMessage[];
+  collectedInfo: ChatCollectedInfo;
+  agentTrace?: string[];
+}
+
+export interface ChatPlanReadyResponse {
+  status: 'plan_ready';
+  plan: Record<string, unknown>;
+  messages: ChatMessage[];
+  collectedInfo: ChatCollectedInfo;
+  agentTrace?: string[];
+}
+
+export interface ChatAwaitingApprovalResponse {
+  status: 'awaiting_approval';
+  pendingAction?: unknown;
+  messages?: ChatMessage[];
+  collectedInfo?: ChatCollectedInfo;
+  agentTrace?: string[];
+}
+
+export type ChatAdvisorResponse =
+  | ChatCollectingResponse
+  | ChatPlanReadyResponse
+  | ChatAwaitingApprovalResponse;
+
 export interface ProfileFlowState {
   draft: ProfileDraft;
   analyzedProfile: NormalizedProfile | null;

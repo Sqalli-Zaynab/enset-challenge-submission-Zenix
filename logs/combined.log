@@ -1,0 +1,7 @@
+{"level":"error","message":"Error: Cannot read properties of undefined (reading 'prompt')","timestamp":"2026-04-16T05:13:47.705Z"}
+{"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:16:51.850Z"}
+{"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:17:47.566Z"}
+{"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:18:16.538Z"}
+{"level":"error","message":"Error: Cannot read properties of undefined (reading 'prompt')","timestamp":"2026-04-16T05:18:43.321Z"}
+{"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:18:47.844Z"}
+{"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:19:46.199Z"}

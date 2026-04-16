@@ -25,8 +25,10 @@ const detectPromptInjection = (text) => {
 };
 
 const guardrailsMiddleware = (req, res, next) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+
   // Check all possible user input fields
-  const userInput = req.body.prompt || req.body.message || req.body.query || req.query.q;
+  const userInput = body.prompt || body.message || body.query || req.query?.q;
   
   if (userInput && detectPromptInjection(userInput)) {
     console.log(`[SECURITY] Prompt injection blocked: ${userInput.substring(0, 100)}`);
@@ -36,8 +38,18 @@ const guardrailsMiddleware = (req, res, next) => {
     });
   }
   
-  if (userInput && req.body.prompt) {
-    req.body.prompt = sanitizeInput(userInput);
+  if (userInput) {
+    if (typeof body.prompt === 'string') {
+      req.body.prompt = sanitizeInput(body.prompt);
+    }
+
+    if (typeof body.message === 'string') {
+      req.body.message = sanitizeInput(body.message);
+    }
+
+    if (typeof body.query === 'string') {
+      req.body.query = sanitizeInput(body.query);
+    }
   }
   
   next();

@@ -7,6 +7,9 @@ import {
   CareerChoice,
   CareerRecommendations,
   CareerRecommendResponse,
+  ChatAdvisorResponse,
+  ChatCollectedInfo,
+  ChatMessage,
   Diagnosis,
   EMPTY_PROFILE_DRAFT,
   EMPTY_PROFILE_FLOW_STATE,
@@ -61,6 +64,11 @@ export class ProfileFlowService {
   readonly planError = signal<string | null>(null);
   readonly analysisTrace = signal<string[]>([]);
   readonly recommendationTrace = signal<string[]>([]);
+  readonly chatMessages = signal<ChatMessage[]>([]);
+  readonly chatCollectedInfo = signal<ChatCollectedInfo>({});
+  readonly currentQuestion = signal<string>('');
+  readonly isChatLoading = signal(false);
+  readonly chatError = signal<string | null>(null);
 
   constructor(private readonly http: HttpClient) {}
 
@@ -123,8 +131,66 @@ export class ProfileFlowService {
     this.planError.set(null);
     this.analysisTrace.set([]);
     this.recommendationTrace.set([]);
+    this.resetDynamicInterview();
     this.clearDraftStorage();
     this.clearResultStorage();
+  }
+
+  async startDynamicInterview(): Promise<void> {
+    this.resetDynamicInterview();
+    await this.requestChatTurn('');
+  }
+
+  async continueDynamicInterview(answer: string): Promise<'collecting' | 'plan_ready'> {
+    const response = await this.requestChatTurn(answer);
+
+    if (response.status === 'collecting') {
+      return 'collecting';
+    }
+
+    return 'plan_ready';
+  }
+
+  applyDynamicInfoToDraft(): void {
+    const info = this.chatCollectedInfo();
+    const currentDraft = this.draft();
+
+    const fieldOfInterest =
+      typeof info.fieldOfInterest === 'string' ? info.fieldOfInterest.trim() : '';
+    const goal = typeof info.goal === 'string' ? info.goal.trim() : '';
+    const academicLevelRaw =
+      typeof info.academicLevel === 'string' ? info.academicLevel.trim().toLowerCase() : '';
+    const preferredRegionRaw =
+      typeof info.preferredRegion === 'string' ? info.preferredRegion.trim().toLowerCase() : '';
+
+    const academicLevel = this.toAcademicLevel(academicLevelRaw);
+    const preferredLocation = this.toPreferredLocation(preferredRegionRaw);
+
+    this.patchDraft({
+      passions: currentDraft.passions.length ? currentDraft.passions : fieldOfInterest ? [fieldOfInterest] : [],
+      interests: currentDraft.interests.length ? currentDraft.interests : fieldOfInterest ? [fieldOfInterest] : [],
+      causes: currentDraft.causes,
+      strengths: currentDraft.strengths,
+      academicLevel: currentDraft.academicLevel ?? academicLevel,
+      fieldOfStudy: currentDraft.fieldOfStudy.trim() || fieldOfInterest,
+      skillLevel: currentDraft.skillLevel,
+      personalGoal: currentDraft.personalGoal.trim() || goal,
+      careerClarity: currentDraft.careerClarity,
+      mainChallenge: currentDraft.mainChallenge,
+      values: currentDraft.values,
+      opportunityTypes: currentDraft.opportunityTypes,
+      preferredLocation: currentDraft.preferredLocation ?? preferredLocation,
+    });
+
+    this.saveDraft();
+  }
+
+  resetDynamicInterview(): void {
+    this.chatMessages.set([]);
+    this.chatCollectedInfo.set({});
+    this.currentQuestion.set('');
+    this.isChatLoading.set(false);
+    this.chatError.set(null);
   }
 
   setSelectedCareerId(careerId: string | null): void {
@@ -409,6 +475,62 @@ export class ProfileFlowService {
     return Array.isArray(value)
       ? value.map((item) => String(item).trim()).filter(Boolean)
       : [];
+  }
+
+  private async requestChatTurn(message: string): Promise<ChatAdvisorResponse> {
+    this.isChatLoading.set(true);
+    this.chatError.set(null);
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<ChatAdvisorResponse>(`${this.apiBaseUrl}/chat/message`, {
+          message,
+          messages: this.chatMessages(),
+          collectedInfo: this.chatCollectedInfo(),
+        }),
+      );
+
+      if (Array.isArray((response as any).messages)) {
+        this.chatMessages.set((response as any).messages);
+      }
+
+      if ((response as any).collectedInfo && this.isRecord((response as any).collectedInfo)) {
+        this.chatCollectedInfo.set((response as any).collectedInfo as ChatCollectedInfo);
+      }
+
+      if (response.status === 'collecting') {
+        this.currentQuestion.set(response.response || 'Can you tell me more?');
+      } else if (response.status === 'plan_ready') {
+        this.currentQuestion.set('');
+      } else {
+        this.currentQuestion.set('I am ready to continue. Share one more detail.');
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Dynamic interview failed:', error);
+      this.chatError.set('We could not get the next question right now. Please try again.');
+      throw error;
+    } finally {
+      this.isChatLoading.set(false);
+    }
+  }
+
+  private toAcademicLevel(raw: string): ProfileDraft['academicLevel'] {
+    if (!raw) return null;
+    if (raw.includes('high')) return 'high_school';
+    if (raw.includes('undergraduate') || raw.includes('bachelor') || raw.includes('license')) return 'undergraduate';
+    if (raw.includes('graduate') || raw.includes('master') || raw.includes('phd')) return 'graduate';
+    if (raw.includes('bootcamp') || raw.includes('certificate')) return 'bootcamp_certificate';
+    if (raw.includes('self')) return 'self_taught';
+    return null;
+  }
+
+  private toPreferredLocation(raw: string): ProfileDraft['preferredLocation'] {
+    if (!raw) return null;
+    if (raw.includes('remote')) return 'remote';
+    if (raw.includes('international') || raw.includes('abroad') || raw.includes('global')) return 'international';
+    return 'local';
   }
 
   private sanitizeNormalizedProfile(value: unknown): NormalizedProfile | null {

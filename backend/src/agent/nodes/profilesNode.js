@@ -1,7 +1,66 @@
 // agent/nodes/profileNode.js
 // LangGraph node that builds a normalized user profile from input payload
 
-import { normalizeArray, normalizeText, inferThemes, profileReadiness } from "../utils/profileHelpers.js";
+function normalizeArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => String(item).split(","))
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  return String(value)
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function inferThemes(profile) {
+  const allSignals = [
+    ...profile.passions,
+    ...profile.interests,
+    ...profile.causes,
+    ...profile.strengths,
+    ...profile.values,
+    profile.personalGoal || "",
+  ].join(" ");
+
+  const buckets = {
+    technology: ["ai", "software", "coding", "code", "data", "cyber", "web", "app", "apps", "tech"],
+    business: ["business", "marketing", "management", "product", "startup", "entrepreneurship", "sales"],
+    creativity: ["design", "creative", "ui", "ux", "video", "content", "art", "branding"],
+    impact: ["education", "health", "social", "community", "accessibility", "environment"],
+    analysis: ["math", "analysis", "research", "problem solving", "statistics", "modeling"],
+  };
+
+  return Object.entries(buckets)
+    .map(([theme, keywords]) => ({
+      theme,
+      score: keywords.reduce((acc, keyword) => acc + (allSignals.includes(keyword) ? 1 : 0), 0),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.theme);
+}
+
+function profileReadiness(profile) {
+  const skillRank = {
+    beginner: 1,
+    intermediate: 2,
+    advanced: 3,
+  };
+  const base = skillRank[profile.skillLevel] || 1;
+  const clarityBoost = {
+    i_dont_know: 0,
+    some_ideas: 0,
+    i_know: 1,
+  }[profile.careerClarity] || 0;
+  return Math.min(base + clarityBoost, 3);
+}
 
 /**
  * Profile Node for LangGraph

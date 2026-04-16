@@ -5,11 +5,12 @@ require('dotenv').config();
 const profileRoutes = require('./src/routes/profile.routes');
 const careerRoutes = require('./src/routes/career.routes');
 const planRoutes = require('./src/routes/plan.routes');
+const chatRoutes = require('./src/routes/chat.routes');
 
 // ===== NEW IMPORTS =====
 const { generalLimiter, aiLimiter } = require('./src/middleware/rateLimit');
 const guardrailsMiddleware = require('./src/middleware/guardrails');
-const logger = require('./src/utils/logger');
+const logger = require('./utils/logger');
 const evalRoutes = require('./src/routes/eval.routes');  // 👈 ADD THIS
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(generalLimiter);        // 2. Rate limit all requests
 app.use('/api/profile', profileRoutes);
 app.use('/api/career', careerRoutes);
 app.use('/api/plan', aiLimiter, planRoutes);  // 3. Stricter limit for AI route
+app.use('/api/chat', aiLimiter, chatRoutes);
 app.use('/api/eval', evalRoutes);  // 👈 ADD THIS (evaluation routes)
 
 // ===== HEALTH CHECK (optional but good) =====

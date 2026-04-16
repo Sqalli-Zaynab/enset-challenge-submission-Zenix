@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 const evaluationLogs = [];
 
@@ -8,7 +8,7 @@ const abTestPrompts = async (userInput, promptA, promptB, llmService) => {
   
   const scoreA = responseA.length;
   const scoreB = responseB.length;
-  
+  w
   const result = {
     timestamp: new Date().toISOString(),
     userInput,
