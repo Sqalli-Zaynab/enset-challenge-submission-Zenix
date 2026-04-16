@@ -479,49 +479,60 @@ export class ProfileFlowService {
       : [];
   }
 
-  private async requestChatTurn(message: string): Promise<ChatAdvisorResponse> {
-    this.isChatLoading.set(true);
-    this.chatError.set(null);
+ private async requestChatTurn(message: string): Promise<ChatAdvisorResponse> {
+  this.isChatLoading.set(true);
+  this.chatError.set(null);
 
-    try {
-      const response = await firstValueFrom(
-        this.http.post<ChatAdvisorResponse>(`${this.apiBaseUrl}/chat/message`, {
-          message,
-          threadId: this.chatThreadId(),
-          messages: this.chatMessages(),
-          collectedInfo: this.chatCollectedInfo(),
-        }),
-      );
+  try {
+    const payload: Record<string, unknown> = {
+      message: (message ?? '').trim(),
+    };
 
-      if (typeof response.threadId === 'string' && response.threadId.trim()) {
-        this.chatThreadId.set(response.threadId);
-      }
-
-      if (Array.isArray((response as any).messages)) {
-        this.chatMessages.set((response as any).messages);
-      }
-
-      if ((response as any).collectedInfo && this.isRecord((response as any).collectedInfo)) {
-        this.chatCollectedInfo.set((response as any).collectedInfo as ChatCollectedInfo);
-      }
-
-      if (response.status === 'collecting') {
-        this.currentQuestion.set(response.response || 'Can you tell me more?');
-      } else if (response.status === 'plan_ready') {
-        this.currentQuestion.set('');
-      } else {
-        this.currentQuestion.set('I am ready to continue. Share one more detail.');
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Dynamic interview failed:', error);
-      this.chatError.set('We could not get the next question right now. Please try again.');
-      throw error;
-    } finally {
-      this.isChatLoading.set(false);
+    const threadId = this.chatThreadId();
+    if (typeof threadId === 'string' && threadId.trim()) {
+      payload['threadId'] = threadId;
     }
+
+    const response = await firstValueFrom(
+      this.http.post<ChatAdvisorResponse>(`${this.apiBaseUrl}/chat/message`, payload),
+    );
+
+    if (typeof (response as any).threadId === 'string' && (response as any).threadId.trim()) {
+      this.chatThreadId.set((response as any).threadId);
+    }
+
+    if (Array.isArray((response as any).messages)) {
+      this.chatMessages.set((response as any).messages);
+    }
+
+    const profile =
+      (response as any).studentProfile && this.isRecord((response as any).studentProfile)
+        ? ((response as any).studentProfile as ChatCollectedInfo)
+        : ((response as any).collectedInfo && this.isRecord((response as any).collectedInfo)
+            ? ((response as any).collectedInfo as ChatCollectedInfo)
+            : null);
+
+    if (profile) {
+      this.chatCollectedInfo.set(profile);
+    }
+
+    if ((response as any).status === 'collecting') {
+      this.currentQuestion.set((response as any).response || 'Can you tell me more?');
+    } else if ((response as any).status === 'plan_ready') {
+      this.currentQuestion.set('');
+    } else {
+      this.currentQuestion.set('I am ready to continue. Share one more detail.');
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Dynamic interview failed:', error);
+    this.chatError.set('We could not get the next question right now. Please try again.');
+    throw error;
+  } finally {
+    this.isChatLoading.set(false);
   }
+}
 
   private toAcademicLevel(raw: string): ProfileDraft['academicLevel'] {
     if (!raw) return null;
