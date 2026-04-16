@@ -146,6 +146,10 @@
             </button>
           </div>
 
+          <p class="plan-panel__status" *ngIf="!selectedChoice()">
+            Choose one career path to generate schools, competency roadmap, and matched opportunities.
+          </p>
+
           <article class="plan-panel panel surface-card" *ngIf="selectedChoice() as choice">
             <header class="plan-panel__header">
               <div class="plan-panel__header-copy">

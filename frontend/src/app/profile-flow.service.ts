@@ -286,8 +286,7 @@ export class ProfileFlowService {
           profileSummary: recommendResponse.profileSummary,
           topChoices: recommendResponse.topChoices,
         },
-        selectedCareerId:
-          state.selectedCareerId ?? recommendResponse.topChoices[0]?.id ?? null,
+        selectedCareerId: null,
       }));
       this.saveResultState();
 

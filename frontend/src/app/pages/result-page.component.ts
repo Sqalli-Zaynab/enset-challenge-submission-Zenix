@@ -51,14 +51,13 @@ export class ResultPageComponent implements OnInit {
 
   readonly selectedChoice = computed(() => {
     const choices = this.topChoices();
+    const selectedCareerId = this.selectedCareerId();
 
-    if (!choices.length) {
+    if (!choices.length || !selectedCareerId) {
       return null;
     }
 
-    return (
-      choices.find((choice) => choice.id === this.selectedCareerId()) ?? choices[0]
-    );
+    return choices.find((choice) => choice.id === selectedCareerId) ?? null;
   });
 
   readonly profileTitle = computed(() => {

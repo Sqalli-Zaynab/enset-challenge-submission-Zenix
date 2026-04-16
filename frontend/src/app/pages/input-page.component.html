@@ -21,18 +21,190 @@
         Let&rsquo;s turn uncertainty into direction.
       </p>
 
-      <div
-        *ngFor="let message of visibleMessages(); trackBy: trackByIndex"
-        class="interview-message"
-        [ngClass]="{
-          'interview-message--assistant': message.role === 'assistant',
-          'interview-message--user': message.role === 'user',
-          'interview-message--question': message.tone === 'question',
-          'interview-message--thinking': message.tone === 'thinking'
-        }"
-      >
-        <p>{{ message.content }}</p>
-      </div>
+      <ng-container *ngFor="let item of timeline(); trackBy: trackByTimelineItem">
+        <div
+          *ngIf="item.type === 'message'"
+          class="interview-message"
+          [ngClass]="{
+            'interview-message--assistant': $any(item).message.role === 'assistant',
+            'interview-message--user': $any(item).message.role === 'user',
+            'interview-message--question': $any(item).message.tone === 'question',
+            'interview-message--thinking': $any(item).message.tone === 'thinking',
+            'interview-message--result': $any(item).message.tone === 'result'
+          }"
+        >
+          <p>{{ $any(item).message.content }}</p>
+        </div>
+
+        <section
+          *ngIf="item.type === 'careers'"
+          class="interview-result interview-result--careers"
+          aria-label="Career recommendations"
+        >
+          <div class="interview-result__header">
+            <span>Career recommendations</span>
+            <small>Choose one to develop</small>
+          </div>
+
+          <button
+            *ngFor="let choice of $any(item).choices; trackBy: trackByChoice"
+            type="button"
+            class="interview-career"
+            [disabled]="isBusy() || $any(item).groupId !== activeCareerGroupId()"
+            (click)="selectCareer(choice)"
+          >
+            <span class="interview-career__meta">
+              <strong>{{ choice.title }}</strong>
+              <em>{{ choice.score }}% match</em>
+            </span>
+            <span class="interview-career__description">
+              {{ choice.shortDescription }}
+            </span>
+            <span class="interview-career__why" *ngIf="choice.reasons.length">
+              Why this fits: {{ choice.reasons.slice(0, 2).join(' ') }}
+            </span>
+          </button>
+
+          <details class="interview-trace" *ngIf="agentTrace().length">
+            <summary>AI reasoning trace</summary>
+            <ul>
+              <li *ngFor="let trace of agentTrace(); trackBy: trackByIndex">
+                {{ trace }}
+              </li>
+            </ul>
+          </details>
+        </section>
+
+        <section
+          *ngIf="item.type === 'schools'"
+          class="interview-result"
+          aria-label="Recommended schools and programs"
+        >
+          <div class="interview-result__header">
+            <span>Study path</span>
+            <small>Schools and programs aligned with this career</small>
+          </div>
+
+          <div class="interview-empty" *ngIf="!$any(item).options.length">
+            Relevant schools and programs will appear here for the selected path.
+          </div>
+
+          <a
+            *ngFor="let option of $any(item).options; trackBy: trackByStudyOption"
+            class="interview-list-row"
+            [href]="option.link || null"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>
+              <strong>{{ option.school }}</strong>
+              <em>{{ option.program }}</em>
+            </span>
+            <small>{{ option.city }}</small>
+          </a>
+        </section>
+
+        <section
+          *ngIf="item.type === 'roadmap'"
+          class="interview-result"
+          aria-label="Competency roadmap"
+        >
+          <div class="interview-result__header">
+            <span>Competency roadmap</span>
+            <small>{{ $any(item).plan.selectedPath.title }}</small>
+          </div>
+
+          <div class="interview-roadmap">
+            <article class="interview-roadmap__phase">
+              <strong>Days 1-30</strong>
+              <ul>
+                <li
+                  *ngFor="
+                    let step of $any(item).plan.roadmap.first30Days;
+                    trackBy: trackByIndex
+                  "
+                >
+                  {{ step }}
+                </li>
+              </ul>
+            </article>
+
+            <article class="interview-roadmap__phase">
+              <strong>Days 31-60</strong>
+              <ul>
+                <li
+                  *ngFor="
+                    let step of $any(item).plan.roadmap.next60Days;
+                    trackBy: trackByIndex
+                  "
+                >
+                  {{ step }}
+                </li>
+              </ul>
+            </article>
+
+            <article class="interview-roadmap__phase">
+              <strong>Days 61-90</strong>
+              <ul>
+                <li
+                  *ngFor="
+                    let step of $any(item).plan.roadmap.next90Days;
+                    trackBy: trackByIndex
+                  "
+                >
+                  {{ step }}
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section
+          *ngIf="item.type === 'opportunities'"
+          class="interview-result"
+          aria-label="Matched opportunities"
+        >
+          <div class="interview-result__header">
+            <span>Matched opportunities</span>
+            <small>Demo-safe opportunities for the selected direction</small>
+          </div>
+
+          <div class="interview-empty" *ngIf="!$any(item).opportunities.length">
+            Relevant opportunities will appear here based on your selected path.
+          </div>
+
+          <article
+            *ngFor="
+              let opportunity of $any(item).opportunities;
+              trackBy: trackByOpportunity
+            "
+            class="interview-list-row interview-list-row--static"
+          >
+            <span>
+              <strong>{{ opportunity.title }}</strong>
+              <em>{{ opportunity.description }}</em>
+            </span>
+            <small>{{ opportunity.type }} - {{ opportunity.location }}</small>
+          </article>
+        </section>
+
+        <div
+          *ngIf="item.type === 'actions'"
+          class="interview-actions"
+          aria-label="Human validation actions"
+        >
+          <button
+            *ngFor="let action of $any(item).actions; trackBy: trackByAction"
+            type="button"
+            class="interview-action"
+            [class.interview-action--primary]="action.tone === 'primary'"
+            [disabled]="isBusy() || $any(item).groupId !== activeActionGroupId()"
+            (click)="handleAction(action.id)"
+          >
+            {{ action.label }}
+          </button>
+        </div>
+      </ng-container>
     </section>
 
     <footer class="interview-composer" aria-label="Answer composer">
@@ -40,9 +212,10 @@
         <div class="interview-input-wrap" [class.interview-input-wrap--busy]="isBusy()">
           <textarea
             [value]="answer()"
-            [disabled]="isBusy()"
-            (input)="answer.set($any($event.target).value); localError.set(null)"
-            placeholder="Reply naturally..."
+            [disabled]="isBusy() || interviewComplete()"
+            (input)="handleComposerInput($event)"
+            (keydown)="handleComposerKeydown($event)"
+            [placeholder]="composerPlaceholder()"
             aria-label="Your answer"
             rows="1"
           ></textarea>
@@ -50,7 +223,7 @@
           <button
             type="button"
             class="interview-send"
-            [disabled]="isBusy()"
+            [disabled]="isBusy() || interviewComplete()"
             (click)="sendAnswer()"
             aria-label="Send answer"
           >

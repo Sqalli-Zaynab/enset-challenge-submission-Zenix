@@ -1,22 +1,33 @@
 import { Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 
 import { ProfileFlowService } from '../profile-flow.service';
 import {
   AcademicLevel,
+  CareerChoice,
   CareerClarity,
   ChatMessage,
   MainChallenge,
+  OpportunityItem,
   OpportunityType,
+  PlanResult,
   PreferredLocation,
   SkillLevel,
+  StudyOption,
   WorkValue,
 } from '../profile-flow.types';
 import { AfaqLogoComponent } from '../shared/ui/afaq-logo/afaq-logo.component';
+import { ResultPdfExportService } from '../shared/services/result-pdf-export.service';
+import {
+  buildTraitTags,
+  getProfileTitle,
+  getReadinessLabel,
+  getSkillLevelLabel,
+} from './result-page.helpers';
 
 interface InterviewDisplayMessage extends ChatMessage {
-  tone?: 'question' | 'thinking';
+  tone?: 'question' | 'thinking' | 'result';
 }
 
 interface FixedInterviewQuestion {
@@ -30,6 +41,56 @@ interface FixedInterviewQuestion {
     | 'workOrientation'
     | 'opportunities';
   prompt: string;
+}
+
+type TimelineItem =
+  | {
+      id: string;
+      type: 'message';
+      message: InterviewDisplayMessage;
+    }
+  | {
+      id: string;
+      type: 'careers';
+      groupId: string;
+      choices: CareerChoice[];
+    }
+  | {
+      id: string;
+      type: 'schools';
+      options: StudyOption[];
+    }
+  | {
+      id: string;
+      type: 'roadmap';
+      plan: PlanResult;
+    }
+  | {
+      id: string;
+      type: 'opportunities';
+      opportunities: OpportunityItem[];
+    }
+  | {
+      id: string;
+      type: 'actions';
+      groupId: string;
+      actions: WorkflowAction[];
+    };
+
+type WorkflowActionType =
+  | 'regenerate-careers'
+  | 'continue-roadmap'
+  | 'regenerate-schools'
+  | 'choose-another-career'
+  | 'continue-opportunities'
+  | 'regenerate-roadmap'
+  | 'export-pdf'
+  | 'regenerate-opportunities';
+
+interface WorkflowAction {
+  id: WorkflowActionType;
+  label: string;
+  tone?: 'primary' | 'secondary';
 }
 
 const INTERVIEW_QUESTIONS: FixedInterviewQuestion[] = [
@@ -78,70 +139,107 @@ export class InputPageComponent {
   @ViewChild('thread') private thread?: ElementRef<HTMLElement>;
 
   private readonly flow = inject(ProfileFlowService);
-  private readonly router = inject(Router);
+  private readonly exportService = inject(ResultPdfExportService);
   private readonly answers = new Map<FixedInterviewQuestion['key'], string>();
   private readonly progressStepCount = INTERVIEW_QUESTIONS.length;
+  private timelineCounter = 1;
+  private actionGroupCounter = 0;
+  private careerGroupCounter = 0;
+  private hasAppliedInterviewToDraft = false;
 
   readonly answer = signal('');
   readonly localError = signal<string | null>(null);
   readonly questionIndex = signal(0);
-  readonly messages = signal<InterviewDisplayMessage[]>([
+  readonly workflowBusy = signal(false);
+  readonly activeActionGroupId = signal<string | null>(null);
+  readonly activeCareerGroupId = signal<string | null>('career-initial');
+  readonly timeline = signal<TimelineItem[]>([
     {
-      role: 'assistant',
-      content: INTERVIEW_QUESTIONS[0].prompt,
-      tone: 'question',
+      id: 'message-1',
+      type: 'message',
+      message: {
+        role: 'assistant',
+        content: INTERVIEW_QUESTIONS[0].prompt,
+        tone: 'question',
+      },
     },
   ]);
 
-  readonly isBusy = computed(() => this.flow.isSubmitting());
+  readonly isBusy = computed(
+    () =>
+      this.workflowBusy() ||
+      this.flow.isSubmitting() ||
+      this.flow.isGeneratingPlan(),
+  );
 
-  readonly visibleMessages = computed<InterviewDisplayMessage[]>(() => {
-    const messages = [...this.messages()];
-
-    if (this.flow.isSubmitting()) {
-      messages.push({
-        role: 'assistant',
-        content: 'Analyzing your profile and preparing 3 career recommendations...',
-        tone: 'thinking',
-      });
-    }
-
-    return messages;
-  });
+  readonly interviewComplete = computed(
+    () => this.answeredCount() >= this.progressStepCount,
+  );
 
   readonly isInitialState = computed(
-    () => !this.messages().some((message) => message.role === 'user'),
+    () =>
+      !this.timeline().some(
+        (item) => item.type === 'message' && item.message.role === 'user',
+      ),
   );
 
   readonly answeredCount = computed(
-    () => this.messages().filter((message) => message.role === 'user').length,
+    () =>
+      this.timeline().filter(
+        (item) => item.type === 'message' && item.message.role === 'user',
+      ).length,
   );
 
   readonly progressSteps = computed(() => {
-    const activeIndex = Math.min(this.answeredCount(), this.progressStepCount - 1);
+    const answeredCount = Math.min(this.answeredCount(), this.progressStepCount);
+    const activeIndex = Math.min(answeredCount, this.progressStepCount - 1);
 
     return Array.from({ length: this.progressStepCount }, (_, index) => ({
-      isActive: !this.flow.isSubmitting() && index === activeIndex,
-      isDone: this.flow.isSubmitting() || index < this.answeredCount(),
+      isActive:
+        !this.isBusy() &&
+        answeredCount < this.progressStepCount &&
+        index === activeIndex,
+      isDone: answeredCount >= this.progressStepCount || index < answeredCount,
     }));
   });
 
   readonly progressText = computed(() => {
     if (this.flow.isSubmitting()) {
-      return 'Building recommendations';
+      return 'Analyzing profile';
+    }
+
+    if (this.flow.isGeneratingPlan()) {
+      return 'Building roadmap';
+    }
+
+    if (this.interviewComplete()) {
+      return 'Human checkpoint';
     }
 
     return `Interview step ${Math.min(this.answeredCount() + 1, this.progressStepCount)} of ${this.progressStepCount}`;
   });
 
+  readonly composerPlaceholder = computed(() =>
+    this.interviewComplete()
+      ? 'Use the choices in the conversation to continue...'
+      : 'Reply naturally...',
+  );
+
   readonly displayedError = computed(
-    () => this.localError() ?? this.flow.submitError(),
+    () => this.localError() ?? this.flow.submitError() ?? this.flow.planError(),
+  );
+
+  readonly agentTrace = computed(() =>
+    [
+      ...this.flow.analysisTrace(),
+      ...this.flow.recommendationTrace(),
+    ].slice(-4),
   );
 
   async sendAnswer(): Promise<void> {
     const text = this.answer().trim();
 
-    if (this.isBusy()) {
+    if (this.isBusy() || this.interviewComplete()) {
       return;
     }
 
@@ -152,48 +250,572 @@ export class InputPageComponent {
 
     this.localError.set(null);
     this.flow.clearSubmitFeedback();
+    this.flow.clearPlanFeedback();
     this.answer.set('');
 
     const currentQuestion = INTERVIEW_QUESTIONS[this.questionIndex()];
     this.answers.set(currentQuestion.key, text);
-    this.messages.update((messages) => [
-      ...messages,
-      { role: 'user', content: text },
-    ]);
+    this.addUserMessage(text);
 
     const nextIndex = this.questionIndex() + 1;
 
     if (nextIndex < INTERVIEW_QUESTIONS.length) {
       this.questionIndex.set(nextIndex);
-      this.messages.update((messages) => [
-        ...messages,
-        {
-          role: 'assistant',
-          content: INTERVIEW_QUESTIONS[nextIndex].prompt,
-          tone: 'question',
-        },
-      ]);
-      this.scrollThreadToBottom();
+      this.addAssistantMessage(INTERVIEW_QUESTIONS[nextIndex].prompt, 'question');
       return;
     }
 
     this.questionIndex.set(INTERVIEW_QUESTIONS.length - 1);
-    await this.finishProfileFlow();
+    await this.finishInterviewAndRecommend();
+  }
+
+  handleComposerInput(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    this.answer.set(textarea.value);
+    this.localError.set(null);
+
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 170)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 170 ? 'auto' : 'hidden';
+  }
+
+  handleComposerKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+
+    if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      void this.sendAnswer();
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      void this.sendAnswer();
+    }
+  }
+
+  async selectCareer(choice: CareerChoice): Promise<void> {
+    if (this.isBusy()) {
+      return;
+    }
+
+    this.activeCareerGroupId.set(null);
+    this.activeActionGroupId.set(null);
+    this.localError.set(null);
+    this.flow.clearPlanFeedback();
+    this.addUserMessage(`I choose ${choice.title}.`);
+    this.addAssistantMessage(
+      'I am looking for schools and programs that can build a strong foundation for this path...',
+      'thinking',
+    );
+
+    await this.generatePlanForChoice(choice.id);
+
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('I could not prepare the next step right now. Please try again.');
+      return;
+    }
+
+    this.addAssistantMessage(
+      'Here are relevant schools and programs for the selected path.',
+      'result',
+    );
+    this.addSchoolsBlock(plan.studyOptions ?? []);
+    this.addActions([
+      {
+        id: 'continue-roadmap',
+        label: 'Continue to roadmap',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-schools',
+        label: 'Regenerate schools',
+      },
+      {
+        id: 'choose-another-career',
+        label: 'Choose another career',
+      },
+    ]);
+  }
+
+  handleAction(action: WorkflowActionType): void {
+    if (this.isBusy()) {
+      return;
+    }
+
+    this.activeActionGroupId.set(null);
+
+    switch (action) {
+      case 'regenerate-careers':
+        void this.regenerateCareers();
+        break;
+      case 'continue-roadmap':
+        void this.continueToRoadmap();
+        break;
+      case 'regenerate-schools':
+        void this.regenerateSchools();
+        break;
+      case 'choose-another-career':
+        this.showCareerChoicesAgain();
+        break;
+      case 'continue-opportunities':
+        void this.continueToOpportunities();
+        break;
+      case 'regenerate-roadmap':
+        void this.regenerateRoadmap();
+        break;
+      case 'regenerate-opportunities':
+        void this.regenerateOpportunities();
+        break;
+      case 'export-pdf':
+        this.exportPlan();
+        break;
+    }
   }
 
   trackByIndex(index: number): number {
     return index;
   }
 
-  private async finishProfileFlow(): Promise<void> {
-    this.applyFixedInterviewToDraft();
-    this.flow.saveDraft();
+  trackByTimelineItem(_: number, item: TimelineItem): string {
+    return item.id;
+  }
+
+  trackByChoice(_: number, choice: CareerChoice): string {
+    return choice.id;
+  }
+
+  trackByStudyOption(_: number, option: StudyOption): string {
+    return `${option.school}-${option.program}`;
+  }
+
+  trackByOpportunity(_: number, opportunity: OpportunityItem): number {
+    return opportunity.id;
+  }
+
+  trackByAction(_: number, action: WorkflowAction): string {
+    return action.id;
+  }
+
+  private async finishInterviewAndRecommend(): Promise<void> {
+    if (!this.hasAppliedInterviewToDraft) {
+      this.applyFixedInterviewToDraft();
+      this.flow.saveDraft();
+      this.hasAppliedInterviewToDraft = true;
+    }
+
+    await this.runCareerRecommendationStage(false);
+  }
+
+  private async regenerateCareers(): Promise<void> {
+    this.addUserMessage('Regenerate recommendations.');
+    await this.runCareerRecommendationStage(true);
+  }
+
+  private async runCareerRecommendationStage(isRegeneration: boolean): Promise<void> {
+    this.workflowBusy.set(true);
+    this.localError.set(null);
+    this.flow.clearSubmitFeedback();
+    this.flow.clearPlanFeedback();
+    this.activeCareerGroupId.set(null);
+
+    this.addAssistantMessage(
+      isRegeneration
+        ? 'I am refreshing the career recommendations from your interview answers...'
+        : 'I am analyzing your profile and preparing your strongest career matches...',
+      'thinking',
+    );
 
     await this.flow.analyzeAndRecommend();
 
-    if (this.flow.recommendations()?.topChoices.length) {
-      await this.router.navigate(['/results']);
+    const choices = this.flow.recommendations()?.topChoices.slice(0, 3) ?? [];
+
+    if (!choices.length) {
+      this.workflowBusy.set(false);
+      this.localError.set(
+        'I could not build career recommendations right now. Please try again.',
+      );
+      return;
     }
+
+    this.addAssistantMessage(
+      'I found three strong directions. Choose one path and I will develop the study path, roadmap, and opportunities.',
+      'result',
+    );
+    this.addCareerBlock(choices);
+    this.addActions([
+      {
+        id: 'regenerate-careers',
+        label: 'Regenerate recommendations',
+      },
+    ]);
+    this.workflowBusy.set(false);
+  }
+
+  private async generatePlanForChoice(choiceId: string): Promise<void> {
+    this.workflowBusy.set(true);
+    await this.flow.generatePlan(choiceId);
+    this.workflowBusy.set(false);
+  }
+
+  private async regenerateSchools(): Promise<void> {
+    const selectedChoice = this.getSelectedChoice();
+
+    if (!selectedChoice) {
+      this.showCareerChoicesAgain();
+      return;
+    }
+
+    this.addUserMessage('Regenerate schools and programs.');
+    this.addAssistantMessage('I am checking the study path again...', 'thinking');
+    await this.generatePlanForChoice(selectedChoice.id);
+
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('I could not refresh the study path right now.');
+      return;
+    }
+
+    this.addSchoolsBlock(plan.studyOptions ?? []);
+    this.addActions([
+      {
+        id: 'continue-roadmap',
+        label: 'Continue to roadmap',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-schools',
+        label: 'Regenerate schools',
+      },
+      {
+        id: 'choose-another-career',
+        label: 'Choose another career',
+      },
+    ]);
+  }
+
+  private async continueToRoadmap(): Promise<void> {
+    const plan = await this.ensureCurrentPlan();
+
+    if (!plan) {
+      this.localError.set('I could not build the roadmap right now.');
+      return;
+    }
+
+    this.addUserMessage('Continue to roadmap.');
+    this.addAssistantMessage('I am building your competency roadmap...', 'thinking');
+    this.addRoadmapBlock(plan);
+    this.addActions([
+      {
+        id: 'continue-opportunities',
+        label: 'Continue to opportunities',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-roadmap',
+        label: 'Regenerate roadmap',
+      },
+      {
+        id: 'regenerate-schools',
+        label: 'Back to schools',
+      },
+    ]);
+  }
+
+  private async regenerateRoadmap(): Promise<void> {
+    const selectedChoice = this.getSelectedChoice();
+
+    if (!selectedChoice) {
+      this.showCareerChoicesAgain();
+      return;
+    }
+
+    this.addUserMessage('Regenerate roadmap.');
+    this.addAssistantMessage('I am rebuilding your roadmap...', 'thinking');
+    await this.generatePlanForChoice(selectedChoice.id);
+
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('I could not refresh the roadmap right now.');
+      return;
+    }
+
+    this.addRoadmapBlock(plan);
+    this.addActions([
+      {
+        id: 'continue-opportunities',
+        label: 'Continue to opportunities',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-roadmap',
+        label: 'Regenerate roadmap',
+      },
+      {
+        id: 'regenerate-schools',
+        label: 'Back to schools',
+      },
+    ]);
+  }
+
+  private async continueToOpportunities(): Promise<void> {
+    const plan = await this.ensureCurrentPlan();
+
+    if (!plan) {
+      this.localError.set('I could not match opportunities right now.');
+      return;
+    }
+
+    this.addUserMessage('Continue to opportunities.');
+    this.addAssistantMessage('I am matching opportunities for your path...', 'thinking');
+    this.addOpportunitiesBlock(plan.recommendedOpportunities);
+    this.addActions([
+      {
+        id: 'export-pdf',
+        label: 'Generate PDF',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-opportunities',
+        label: 'Regenerate opportunities',
+      },
+      {
+        id: 'choose-another-career',
+        label: 'Choose another career',
+      },
+    ]);
+  }
+
+  private async regenerateOpportunities(): Promise<void> {
+    const selectedChoice = this.getSelectedChoice();
+
+    if (!selectedChoice) {
+      this.showCareerChoicesAgain();
+      return;
+    }
+
+    this.addUserMessage('Regenerate opportunities.');
+    this.addAssistantMessage('I am checking the opportunity matches again...', 'thinking');
+    await this.generatePlanForChoice(selectedChoice.id);
+
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('I could not refresh opportunities right now.');
+      return;
+    }
+
+    this.addOpportunitiesBlock(plan.recommendedOpportunities);
+    this.addActions([
+      {
+        id: 'export-pdf',
+        label: 'Generate PDF',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-opportunities',
+        label: 'Regenerate opportunities',
+      },
+      {
+        id: 'choose-another-career',
+        label: 'Choose another career',
+      },
+    ]);
+  }
+
+  private showCareerChoicesAgain(): void {
+    const choices = this.flow.recommendations()?.topChoices.slice(0, 3) ?? [];
+
+    if (!choices.length) {
+      this.localError.set('Career recommendations are not ready yet.');
+      return;
+    }
+
+    this.addUserMessage('Choose another career.');
+    this.addAssistantMessage('Choose the career path you want me to develop.', 'result');
+    this.addCareerBlock(choices);
+    this.addActions([
+      {
+        id: 'regenerate-careers',
+        label: 'Regenerate recommendations',
+      },
+    ]);
+  }
+
+  private async ensureCurrentPlan(): Promise<PlanResult | null> {
+    const selectedChoice = this.getSelectedChoice();
+    const existingPlan = this.flow.plan();
+
+    if (existingPlan && selectedChoice?.id === existingPlan.selectedPath.id) {
+      return existingPlan;
+    }
+
+    if (!selectedChoice) {
+      return null;
+    }
+
+    await this.generatePlanForChoice(selectedChoice.id);
+
+    return this.flow.plan();
+  }
+
+  private addUserMessage(content: string): void {
+    this.addMessage({ role: 'user', content });
+  }
+
+  private addAssistantMessage(
+    content: string,
+    tone: InterviewDisplayMessage['tone'] = 'question',
+  ): void {
+    this.addMessage({ role: 'assistant', content, tone });
+  }
+
+  private addMessage(message: InterviewDisplayMessage): void {
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'message',
+        message,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private addCareerBlock(choices: CareerChoice[]): void {
+    const groupId = this.nextCareerGroupId();
+    this.activeCareerGroupId.set(groupId);
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'careers',
+        groupId,
+        choices,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private addSchoolsBlock(options: StudyOption[]): void {
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'schools',
+        options,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private addRoadmapBlock(plan: PlanResult): void {
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'roadmap',
+        plan,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private addOpportunitiesBlock(opportunities: OpportunityItem[]): void {
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'opportunities',
+        opportunities,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private addActions(actions: WorkflowAction[]): void {
+    const groupId = this.nextActionGroupId();
+    this.activeActionGroupId.set(groupId);
+    this.timeline.update((items) => [
+      ...items,
+      {
+        id: this.nextTimelineId(),
+        type: 'actions',
+        groupId,
+        actions,
+      },
+    ]);
+    this.scrollThreadToBottom();
+  }
+
+  private nextTimelineId(): string {
+    this.timelineCounter += 1;
+    return `timeline-${this.timelineCounter}`;
+  }
+
+  private nextActionGroupId(): string {
+    this.actionGroupCounter += 1;
+    return `actions-${this.actionGroupCounter}`;
+  }
+
+  private nextCareerGroupId(): string {
+    this.careerGroupCounter += 1;
+    return `careers-${this.careerGroupCounter}`;
+  }
+
+  private exportPlan(): void {
+    const selectedChoice = this.getSelectedChoice();
+    const plan = this.flow.plan();
+    const analyzedProfile = this.flow.analyzedProfile();
+    const recommendations = this.flow.recommendations();
+
+    if (!selectedChoice || !plan || !analyzedProfile || !recommendations) {
+      this.localError.set('The report is not ready yet.');
+      return;
+    }
+
+    void this.exportService.exportResultReport({
+      analyzedProfile,
+      diagnosis: this.flow.diagnosis(),
+      recommendations,
+      selectedChoice,
+      plan,
+      profileTitle: getProfileTitle(selectedChoice.id),
+      profileSummary: this.getProfileSummary(),
+      traitTags: buildTraitTags(analyzedProfile, recommendations.profileSummary),
+      skillLevelLabel: getSkillLevelLabel(analyzedProfile),
+      readinessLabel: getReadinessLabel(analyzedProfile),
+    });
+  }
+
+  private getProfileSummary(): string {
+    const profile = this.flow.analyzedProfile();
+
+    if (profile?.personalGoal.trim()) {
+      return `"${profile.personalGoal.trim()}"`;
+    }
+
+    return this.flow.diagnosis()?.summary ?? 'Your profile is ready for the next step.';
+  }
+
+  private getSelectedChoice(): CareerChoice | null {
+    const selectedCareerId = this.flow.selectedCareerId();
+
+    if (!selectedCareerId) {
+      return null;
+    }
+
+    return (
+      this.flow
+        .recommendations()
+        ?.topChoices.find((choice) => choice.id === selectedCareerId) ?? null
+    );
   }
 
   private applyFixedInterviewToDraft(): void {
