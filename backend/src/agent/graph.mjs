@@ -1,14 +1,22 @@
+// graph.mjs
+// LangGraph orchestration with external nodes for profile, RAG, plan, and HITL
+
 import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Import all external nodes
 import { profileNode } from "./nodes/profileNode.js";
 import { ragNode } from "./nodes/ragNode.js";
+import { planNode } from "./nodes/planNode.js";
+import { humanCheckpointNode } from "./nodes/humanCheckpointNode.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ------------------------------------------------------------
-// EXTENDED STATE with RAG and HITL fields
+// STATE DEFINITION (with RAG and HITL fields)
 // ------------------------------------------------------------
 const State = Annotation.Root({
   mode: Annotation({
@@ -43,12 +51,10 @@ const State = Annotation.Root({
     reducer: (left, right) => left.concat(right || []),
     default: () => [],
   }),
-  // NEW: RAG fields
   ragContext: Annotation({
     reducer: (_left, right) => right,
     default: () => [],
   }),
-  // NEW: HITL fields
   humanApprovalNeeded: Annotation({
     reducer: (_left, right) => right,
     default: () => false,
@@ -59,10 +65,13 @@ const State = Annotation.Root({
   }),
   userApproval: Annotation({
     reducer: (_left, right) => right,
-    default: () => null, // 'approved', 'rejected', or null
+    default: () => null,
   }),
 });
 
+// ------------------------------------------------------------
+// HELPER FUNCTIONS (shared by multiple nodes)
+// ------------------------------------------------------------
 const CAREERS_PATH = path.join(__dirname, "..", "data", "careers.json");
 const OPPORTUNITIES_PATH = path.join(__dirname, "..", "data", "oportunities.json");
 
@@ -111,12 +120,21 @@ function overlap(listA, listB) {
   return normalizeArray(listA).filter((item) => setB.has(item));
 }
 
-function routeFromMode(state) {
-  if (state.mode === "analyze") return "diagnoseProfile";
-  if (state.mode === "plan") return "retrieveRAG";
-  return "scoreCareers";
+function formatCareer(career) {
+  return {
+    id: career.id,
+    title: career.title,
+    score: career.score,
+    entryDifficulty: career.entryDifficulty,
+    shortDescription: career.shortDescription,
+    reasons: career.reasons.slice(0, 3),
+    recommendedOpportunities: career.recommendedOpportunities,
+  };
 }
 
+// ------------------------------------------------------------
+// NODES THAT REMAIN INLINE (they depend on helpers above)
+// ------------------------------------------------------------
 function diagnoseProfileNode(state) {
   const profile = state.profile;
 
@@ -258,122 +276,15 @@ function selectRecommendationsNode(state) {
   };
 }
 
-function formatCareer(career) {
-  return {
-    id: career.id,
-    title: career.title,
-    score: career.score,
-    entryDifficulty: career.entryDifficulty,
-    shortDescription: career.shortDescription,
-    reasons: career.reasons.slice(0, 3),
-    recommendedOpportunities: career.recommendedOpportunities,
-  };
+// ------------------------------------------------------------
+// CONDITIONAL ROUTING
+// ------------------------------------------------------------
+function routeFromMode(state) {
+  if (state.mode === "analyze") return "diagnoseProfile";
+  if (state.mode === "plan") return "retrieveRAG";
+  return "scoreCareers";
 }
 
-// ------------------------------------------------------------
-// NEW: RAG Node (Agentic Retrieval)
-// ------------------------------------------------------------
-async function retrieveRAGNode(state) {
-  const { ragService } = await import("../services/rag.service.js");
-  const profile = state.profile;
-  const query = `Career guidance for someone with interests in ${profile.interests.join(", ")} and strengths in ${profile.strengths.join(", ")}. Personal goal: ${profile.personalGoal}`;
-  
-  const ragContext = await ragService.query(query, 3);
-  
-  return {
-    ragContext,
-    trace: [`RAGAgent: retrieved ${ragContext.length} relevant documents from knowledge base`],
-  };
-}
-
-// ------------------------------------------------------------
-// NEW: Human-in-the-Loop Checkpoint Node
-// ------------------------------------------------------------
-async function humanCheckpointNode(state) {
-  if (state.userApproval === "approved") {
-    return { humanApprovalNeeded: false, pendingAction: null, userApproval: null };
-  }
-  if (state.userApproval === "rejected") {
-    return { humanApprovalNeeded: false, pendingAction: null, userApproval: null, plan: null };
-  }
-
-  const pendingPlan = state.plan;
-  if (pendingPlan && !state.humanApprovalNeeded) {
-    return {
-      humanApprovalNeeded: true,
-      pendingAction: {
-        type: "APPROVE_PLAN",
-        data: {
-          selectedPath: pendingPlan.selectedPath,
-          roadmap: pendingPlan.roadmap,
-          recommendedOpportunitiesCount: pendingPlan.recommendedOpportunities?.length,
-        },
-      },
-    };
-  }
-  return state;
-}
-
-// ------------------------------------------------------------
-// MODIFIED: buildPlanNode with RAG context
-// ------------------------------------------------------------
-async function buildPlanNode(state) {
-  const careers = await readJson(CAREERS_PATH);
-  const opportunities = await readJson(OPPORTUNITIES_PATH);
-  const payload = state.payload || {};
-  const profile = state.profile;
-  const ragContext = state.ragContext || [];
-
-  const selectedId = payload.selectedCareerId || payload.selectedPath || payload.careerId;
-  const selectedCareer = careers.find(
-    (career) => career.id === selectedId || career.title.toLowerCase() === String(selectedId || "").toLowerCase(),
-  ) || careers[0];
-
-  const preferredTypes = normalizeArray(payload.opportunityTypes || profile.opportunityTypes);
-  const preferredLocation = normalizeText(payload.preferredLocation || profile.preferredLocation || "remote").toLowerCase();
-
-  let filteredOpportunities = opportunities
-    .filter((item) => {
-      const typeOk = preferredTypes.length ? preferredTypes.includes(String(item.type).toLowerCase()) : true;
-      const locationOk = preferredLocation ? item.location.toLowerCase() === preferredLocation || item.location.toLowerCase() === "flexible" : true;
-      const tagOk = item.tags.some((tag) => selectedCareer.tags.includes(tag));
-      return typeOk && locationOk && tagOk;
-    })
-    .slice(0, 5);
-
-  let ragEnhancedExplanation = "";
-  if (ragContext.length > 0) {
-    ragEnhancedExplanation = `\n\nAdditional context from knowledge base: ${ragContext.map(c => c.content).join(" ").substring(0, 500)}`;
-  }
-
-  const plan = {
-    selectedPath: {
-      id: selectedCareer.id,
-      title: selectedCareer.title,
-      shortDescription: selectedCareer.shortDescription,
-    },
-    roadmap: {
-      first30Days: selectedCareer.roadmap.first30Days,
-      next60Days: selectedCareer.roadmap.next60Days,
-      next90Days: selectedCareer.roadmap.next90Days,
-    },
-    recommendedOpportunities: filteredOpportunities,
-    explanation: `This plan focuses on ${selectedCareer.title} because it aligns with your strongest signals and keeps the next steps concrete.${ragEnhancedExplanation}`,
-  };
-
-  return {
-    plan,
-    trace: [
-      `PlannerAgent: built a 30-60-90 day roadmap for ${selectedCareer.title}`,
-      `OpportunitiesAgent: found ${filteredOpportunities.length} matching opportunities`,
-      ragContext.length ? `RAGAgent: enriched plan with ${ragContext.length} external documents` : null,
-    ].filter(Boolean),
-  };
-}
-
-// ------------------------------------------------------------
-// CONDITIONAL ROUTING AFTER HITL
-// ------------------------------------------------------------
 function afterHumanCheckpoint(state) {
   if (state.humanApprovalNeeded) {
     return "humanCheckpoint";
@@ -385,31 +296,38 @@ function afterHumanCheckpoint(state) {
 }
 
 // ------------------------------------------------------------
-// BUILD THE GRAPH (with imported profileNode)
+// BUILD GRAPH USING EXTERNAL NODES
 // ------------------------------------------------------------
 const graph = new StateGraph(State)
-  .addNode("buildProfile", profileNode)          // NOW USING EXTERNAL NODE
+  .addNode("buildProfile", profileNode)
   .addNode("diagnoseProfile", diagnoseProfileNode)
   .addNode("scoreCareers", scoreCareersNode)
   .addNode("selectRecommendations", selectRecommendationsNode)
   .addNode("retrieveRAG", ragNode)
-  .addNode("buildPlan", buildPlanNode)
+  .addNode("buildPlan", planNode)
   .addNode("humanCheckpoint", humanCheckpointNode)
 
   .addEdge(START, "buildProfile")
-  .addConditionalEdges("buildProfile", routeFromMode, ["diagnoseProfile", "retrieveRAG", "scoreCareers"])
-  
+  .addConditionalEdges("buildProfile", routeFromMode, [
+    "diagnoseProfile",
+    "retrieveRAG",
+    "scoreCareers",
+  ])
+
   .addEdge("retrieveRAG", "buildPlan")
   .addEdge("buildPlan", "humanCheckpoint")
-  .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
-  
+  .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, [
+    "humanCheckpoint",
+    END,
+  ])
+
   .addEdge("diagnoseProfile", END)
   .addEdge("scoreCareers", "selectRecommendations")
   .addEdge("selectRecommendations", END)
   .compile();
 
 // ------------------------------------------------------------
-// EXPORT
+// EXPORTED RUN FUNCTION
 // ------------------------------------------------------------
 export async function runAgentGraph(mode = "recommend", payload = {}, userApproval = null, config = {}) {
   const input = {
