@@ -14,27 +14,38 @@ const State = Annotation.Root({
   nextQuestion: Annotation({ reducer: (_l, r) => r, default: () => "" }),
   readyForSearch: Annotation({ reducer: (_l, r) => r, default: () => false }),
   readyForPlan: Annotation({ reducer: (_l, r) => r, default: () => false }),
+  interviewAssessment: Annotation({ reducer: (_l, r) => r, default: () => null }),
+  confidenceByDimension: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
+  detectedSignals: Annotation({ reducer: (_l, r) => r, default: () => [] }),
+  reasoningSummary: Annotation({ reducer: (_l, r) => r, default: () => "" }),
   rawSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   verifiedSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
-  searchQueries: Annotation({ reducer: (_l, r) => r, default: () => [] }),
+ searchQueries: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   plan: Annotation({ reducer: (_l, r) => r, default: () => null }),
   trace: Annotation({ reducer: (l, r) => l.concat(r || []), default: () => [] }),
 });
+
 function inputNode(state) {
   const message = state.payload?.message?.trim() || "";
 
   if (!message) {
     return {
-      messages: [{ role: "assistant", content: "Salut 👋 Je vais t’aider à choisir une voie réaliste. D’abord, quel domaine t’intéresse le plus ?" }],
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "Salut 👋 Je vais t’aider à choisir une voie réaliste. Pour commencer, parle-moi du domaine qui t’attire le plus et de ta situation actuelle.",
+        },
+      ],
       trace: ["InputNode: welcome turn"],
     };
   }
-
-  return {
+   return {
     messages: [{ role: "user", content: message }],
     trace: ["InputNode: user message appended"],
   };
 }
+
 function routeAfterQuestion(state) {
   return state.readyForPlan ? "searchSchools" : END;
 }
@@ -54,6 +65,7 @@ const graph = new StateGraph(State)
   .addEdge("verifySources", "buildStudyPlan")
   .addEdge("buildStudyPlan", END)
   .compile({ checkpointer: new MemorySaver() });
+
 export async function runZenixChatGraph(payload = {}, threadId = null) {
   const input = {
     mode: "chat",
@@ -71,11 +83,14 @@ export async function runZenixChatGraph(payload = {}, threadId = null) {
       messages: result.messages,
       studentProfile: result.studentProfile,
       studentSummary: result.studentSummary,
+      interviewAssessment: result.interviewAssessment,
+      confidenceByDimension: result.confidenceByDimension,
+      detectedSignals: result.detectedSignals,
+      reasoningSummary: result.reasoningSummary,
       agentTrace: result.trace,
     };
   }
-
-  return {
+ return {
     status: "plan_ready",
     plan: result.plan,
     searchQueries: result.searchQueries,
@@ -83,6 +98,10 @@ export async function runZenixChatGraph(payload = {}, threadId = null) {
     messages: result.messages,
     studentProfile: result.studentProfile,
     studentSummary: result.studentSummary,
+    interviewAssessment: result.interviewAssessment,
+    confidenceByDimension: result.confidenceByDimension,
+    detectedSignals: result.detectedSignals,
+    reasoningSummary: result.reasoningSummary,
     agentTrace: result.trace,
   };
 }

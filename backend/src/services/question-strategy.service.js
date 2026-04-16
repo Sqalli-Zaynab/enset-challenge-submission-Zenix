@@ -1,54 +1,50 @@
-const QUESTIONS = {
+const QUESTION_BY_DIMENSION = {
   fieldOfInterest:
-    "Quel domaine t’intéresse le plus aujourd’hui ? (médecine, ingénierie/info, commerce, droit, arts)",
-  academicLevel: "Quel est ton niveau actuel ? (bac, licence, master)",
-  preferredRegion: "Dans quelle ville ou région du Maroc préfères-tu étudier ?",
+    "Quel domaine t’attire réellement aujourd’hui, même si tu hésites encore ? (médecine, ingénierie/info, commerce, droit, arts...)",
+  academicLevel:
+    "Quel est ton niveau actuel ? (bac, licence, master)",
+  academicConfidence:
+    "Comment évalues-tu ton niveau scolaire aujourd’hui ? Donne-moi si possible une moyenne approximative ou ton ressenti.",
+  preferredRegion:
+    "Dans quelle ville ou région du Maroc préfères-tu étudier, ou es-tu prêt à bouger ?",
   preferredLanguage:
     "Tu préfères étudier en français, en anglais ou en arabe ?",
   institutionType:
     "Tu préfères un établissement public, privé, ou peu importe ?",
-  budgetMAD: "Quel budget annuel peux-tu envisager environ ? (ex: 30000 MAD)",
+  budgetMAD:
+    "Quel budget annuel peux-tu envisager environ ? Donne-moi un ordre de grandeur en MAD.",
+  psychologicalReadiness:
+    "Psychologiquement, tu te sens prêt pour un parcours exigeant, ou tu préfères une voie plus progressive et rassurante ?",
+  familySupport:
+    "Est-ce que ton entourage soutient vraiment ton projet, ou bien tu risques de devoir avancer avec peu de soutien ?",
+  mobility:
+    "Peux-tu déménager pour tes études ou dois-tu rester proche de ta ville actuelle ?",
+  riskTolerance:
+   "Tu préfères viser un parcours très sélectif avec plus de risque, ou une option plus sûre et stable ?",
+  workWhileStudying:
+    "Penses-tu devoir travailler pendant tes études ?",
 };
-
-export function getNextQuestion(profile) {
-  for (const key of profile.missing || []) {
-    if (QUESTIONS[key]) return QUESTIONS[key];
+export function getFallbackQuestion(profile = {}, readiness = null) {
+  const critical = readiness?.missingCritical || [];
+  if (critical.length) {
+    const first = critical[0];
+    return QUESTION_BY_DIMENSION[first] || "Peux-tu me donner plus de détails pour mieux comprendre ton profil ?";
   }
 
-  if ((profile.psychologicalReadiness ?? 3) <= 2) {
-    return "Tu te sens plutôt confiant pour un parcours exigeant, ou tu préfères une voie plus progressive et rassurante ?";
+  const psychological = readiness?.missingPsychological || [];
+  if (psychological.length) {
+    const first = psychological[0];
+    return QUESTION_BY_DIMENSION[first] || "J’ai besoin de mieux comprendre ta situation personnelle pour affiner la recommandation.";
   }
 
-  if ((profile.familySupport ?? 3) <= 2) {
-    return "Est-ce que ton entourage soutient ton projet, ou bien tu dois surtout compter sur toi-même ?";
+  const logistics = readiness?.missingLogistics || [];
+  if (logistics.length) {
+    const first = logistics[0];
+    return QUESTION_BY_DIMENSION[first] || "J’ai besoin de comprendre tes contraintes pratiques pour aller plus loin.";
+  }
+  if (!Array.isArray(profile.interests) || profile.interests.length === 0) {
+    return "Qu’est-ce qui te plaît vraiment dans ce domaine ? Les matières, le style de vie, le salaire, l’impact, la créativité, ou autre chose ?";
   }
 
-  if ((profile.mobility ?? 3) <= 2) {
-    return "Est-ce que tu peux déménager pour tes études, ou tu dois rester près de ta ville actuelle ?";
-  }
-
-  if (!Array.isArray(profile.constraints) || profile.constraints.length === 0) {
-    return "As-tu des contraintes particulières à prendre en compte ? (budget, transport, job étudiant, bourse, accessibilité)";
-  }
-
-  return "Merci. J’ai assez d’informations pour préparer une recommandation réaliste et personnalisée.";
-}
-
-export function isReadyForSearch(profile) {
-  return Boolean(
-    profile.fieldOfInterest &&
-      profile.academicLevel &&
-      profile.preferredRegion,
-  );
-}
-
-export function isReadyForPlan(profile) {
-  return Boolean(
-    profile.fieldOfInterest &&
-      profile.academicLevel &&
-      profile.preferredRegion &&
-      profile.preferredLanguage &&
-      profile.institutionType &&
-      profile.budgetMAD,
-  );
+  return "Merci. J’ai assez d’informations pour construire une recommandation réaliste et personnalisée.";
 }

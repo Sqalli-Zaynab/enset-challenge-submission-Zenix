@@ -1,16 +1,24 @@
-import { getNextQuestion, isReadyForSearch, isReadyForPlan } from "../../services/question-strategy.service.js";
+import { runInterviewTurn } from "../../services/interview-agent.service.js";
 
 export async function dynamicQuestionNode(state) {
-  const profile = state.studentProfile || {};
-  const nextQuestion = getNextQuestion(profile);
+  const result = await runInterviewTurn({
+    messages: state.messages || [],
+    currentProfile: state.studentProfile || {},
+  });
 
   return {
-    nextQuestion,
-    readyForSearch: isReadyForSearch(profile),
-    readyForPlan: isReadyForPlan(profile),
-    trace: [
-      `DynamicQuestion: readyForSearch=${isReadyForSearch(profile)}`,
-      `DynamicQuestion: readyForPlan=${isReadyForPlan(profile)}`,
+    studentProfile: result.updatedProfile,
+    nextQuestion: result.nextQuestion,
+    readyForSearch: result.interviewReady,
+    readyForPlan: result.interviewReady,
+    interviewAssessment: result.interviewAssessment,
+    confidenceByDimension: result.confidenceByDimension,
+    detectedSignals: result.detectedSignals,
+    reasoningSummary: result.reasoningSummary,
+     trace: [
+      `DynamicQuestion: interviewReady=${result.interviewReady}`,
+      `DynamicQuestion: stage=${result.interviewAssessment.interviewStage}`,
+      `DynamicQuestion: coverage=${result.interviewAssessment.coverageScore}`,
     ],
   };
 }
