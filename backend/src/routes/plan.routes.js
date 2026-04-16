@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import * as planController from "../controllers/plan.controller.js";
+
 const router = express.Router();
-const planController = require("../controllers/plan.controller");
 
 router.post("/generate", planController.generatePlan);
 
-module.exports = router;
+export default router;

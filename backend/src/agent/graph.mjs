@@ -4,7 +4,9 @@
 // - "analyze" mode (existing profile diagnosis)
 // - "chat" mode (conversational Moroccan university advisor with Groq + Tavily)
 
-import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+// FIX: Import MemorySaver for native LangGraph multi-turn persistence.
+// This replaces the manual sessions Map in chat.routes.js entirely.
+import { StateGraph, Annotation, START, END, MemorySaver } from "@langchain/langgraph";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,12 +17,12 @@ import { ragNode } from "./nodes/ragNode.js";
 import { planNode } from "./nodes/planNode.js";
 import { humanCheckpointNode } from "./nodes/humanCheckpointNode.js";
 
-// NEW: Import chat and search nodes for Moroccan university advisor
+// Import chat and search nodes for Moroccan university advisor
 import { chatNode } from "./nodes/chatNode.js";
 import { searchNode } from "./nodes/searchNode.js";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
 // ------------------------------------------------------------
 // STATE DEFINITION (extended with conversation fields)
@@ -74,7 +76,11 @@ const State = Annotation.Root({
     reducer: (_left, right) => right,
     default: () => null,
   }),
-  // NEW: Conversation fields for chat mode
+
+  // Conversation fields for chat mode.
+  // IMPORTANT: messages uses a concat reducer, meaning chatNode must return
+  // ONLY the new messages for this turn (the delta), not the full array.
+  // Returning the full array will cause every prior message to be duplicated.
   messages: Annotation({
     reducer: (left, right) => left.concat(right || []),
     default: () => [],
@@ -82,6 +88,10 @@ const State = Annotation.Root({
   collectedInfo: Annotation({
     reducer: (_left, right) => right,
     default: () => ({}),
+  }),
+  currentPhase: Annotation({
+    reducer: (_left, right) => right,
+    default: () => "general",
   }),
   nextQuestion: Annotation({
     reducer: (_left, right) => right,
@@ -100,20 +110,11 @@ const State = Annotation.Root({
 // ------------------------------------------------------------
 // HELPER FUNCTIONS (shared by multiple nodes)
 // ------------------------------------------------------------
-const CAREERS_PATH = path.join(__dirname, "..", "data", "careers.json");
+const CAREERS_PATH       = path.join(__dirname, "..", "data", "careers.json");
 const OPPORTUNITIES_PATH = path.join(__dirname, "..", "data", "oportunities.json");
 
-const skillRank = {
-  beginner: 1,
-  intermediate: 2,
-  advanced: 3,
-};
-
-const difficultyRank = {
-  easy: 1,
-  medium: 2,
-  hard: 3,
-};
+const skillRank      = { beginner: 1, intermediate: 2, advanced: 3 };
+const difficultyRank = { easy: 1, medium: 2, hard: 3 };
 
 async function readJson(filePath) {
   const content = await readFile(filePath, "utf-8");
@@ -123,15 +124,9 @@ async function readJson(filePath) {
 function normalizeArray(value) {
   if (!value) return [];
   if (Array.isArray(value)) {
-    return value
-      .flatMap((item) => String(item).split(","))
-      .map((item) => item.trim().toLowerCase())
-      .filter(Boolean);
+    return value.flatMap(item => String(item).split(",")).map(item => item.trim().toLowerCase()).filter(Boolean);
   }
-  return String(value)
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
+  return String(value).split(",").map(item => item.trim().toLowerCase()).filter(Boolean);
 }
 
 function normalizeText(value) {
@@ -140,12 +135,12 @@ function normalizeText(value) {
 
 function textIncludesAny(text, keywords) {
   const lowered = String(text || "").toLowerCase();
-  return keywords.some((keyword) => lowered.includes(String(keyword).toLowerCase()));
+  return keywords.some(keyword => lowered.includes(String(keyword).toLowerCase()));
 }
 
 function overlap(listA, listB) {
   const setB = new Set(normalizeArray(listB));
-  return normalizeArray(listA).filter((item) => setB.has(item));
+  return normalizeArray(listA).filter(item => setB.has(item));
 }
 
 function formatCareer(career) {
@@ -168,12 +163,12 @@ function diagnoseProfileNode(state) {
 
   let recommendationMode = "explore";
   if (profile.careerClarity === "some_ideas") recommendationMode = "compare";
-  if (profile.careerClarity === "i_know") recommendationMode = "execute";
+  if (profile.careerClarity === "i_know")     recommendationMode = "execute";
 
   const challengeLabels = {
-    i_dont_know_what_fits_me: "fit discovery",
+    i_dont_know_what_fits_me:         "fit discovery",
     i_dont_know_how_to_reach_my_goal: "execution gap",
-    i_cant_find_opportunities: "opportunity discovery",
+    i_cant_find_opportunities:        "opportunity discovery",
   };
 
   const diagnosis = {
@@ -201,7 +196,7 @@ async function scoreCareersNode(state) {
   const careers = await readJson(CAREERS_PATH);
   const profile = state.profile;
 
-  const scoredCareers = careers.map((career) => {
+  const scoredCareers = careers.map(career => {
     const reasons = [];
     let score = 0;
 
@@ -223,7 +218,7 @@ async function scoreCareersNode(state) {
       reasons.push(`connects with causes you care about: ${causeHits.slice(0, 2).join(", ")}`);
     }
 
-    if (career.fieldTags.some((tag) => profile.fieldOfStudy.includes(tag))) {
+    if (career.fieldTags.some(tag => profile.fieldOfStudy.includes(tag))) {
       score += 10;
       reasons.push(`aligned with your current field: ${profile.fieldOfStudy}`);
     }
@@ -252,11 +247,7 @@ async function scoreCareersNode(state) {
       reasons.push(`compatible with your preferred location`);
     }
 
-    return {
-      ...career,
-      score,
-      reasons,
-    };
+    return { ...career, score, reasons };
   });
 
   scoredCareers.sort((a, b) => b.score - a.score);
@@ -268,30 +259,25 @@ async function scoreCareersNode(state) {
 }
 
 function selectRecommendationsNode(state) {
-  const profile = state.profile;
-  const sorted = state.scoredCareers || [];
+  const profile   = state.profile;
+  const sorted    = state.scoredCareers || [];
   const readiness = profile.readiness || 1;
 
-  const main = sorted[0] || null;
-  const alternative = sorted.find((item) => item.id !== main?.id) || null;
-  const safe =
-    sorted.find(
-      (item) =>
-        item.id !== main?.id &&
-        item.id !== alternative?.id &&
-        (difficultyRank[item.entryDifficulty] || 2) <= readiness,
-    ) || sorted[2] || null;
+  const main        = sorted[0] || null;
+  const alternative = sorted.find(item => item.id !== main?.id) || null;
+  const safe = sorted.find(
+    item =>
+      item.id !== main?.id &&
+      item.id !== alternative?.id &&
+      (difficultyRank[item.entryDifficulty] || 2) <= readiness,
+  ) || sorted[2] || null;
 
   const recommendations = {
-    profileSummary: {
-      themes: profile.themes,
-      readiness,
-      careerClarity: profile.careerClarity,
-    },
+    profileSummary: { themes: profile.themes, readiness, careerClarity: profile.careerClarity },
     topChoices: [
-      main ? { label: "best_fit", ...formatCareer(main) } : null,
+      main        ? { label: "best_fit",    ...formatCareer(main)        } : null,
       alternative ? { label: "alternative", ...formatCareer(alternative) } : null,
-      safe ? { label: "safe_option", ...formatCareer(safe) } : null,
+      safe        ? { label: "safe_option", ...formatCareer(safe)        } : null,
     ].filter(Boolean),
   };
 
@@ -307,83 +293,97 @@ function selectRecommendationsNode(state) {
 // ------------------------------------------------------------
 // CONDITIONAL ROUTING
 // ------------------------------------------------------------
+
+// Route at START — chat goes directly to chatNode, skipping buildProfile entirely.
+// buildProfile was resetting collectedInfo/currentPhase on every call.
+function routeByModeAtStart(state) {
+  if (state.mode === "chat") return "chatNode";
+  return "buildProfile";
+}
+
+// Only used after buildProfile (non-chat modes).
 function routeFromMode(state) {
   if (state.mode === "analyze") return "diagnoseProfile";
-  if (state.mode === "plan") return "retrieveRAG";
-  if (state.mode === "chat") return "chatNode";   // NEW: chat mode
+  if (state.mode === "plan")    return "retrieveRAG";
   return "scoreCareers";
 }
 
 function routeAfterChat(state) {
-  // After one chat turn, either continue to search (if complete) or end and wait for next user message.
   return state.profileComplete ? "searchNode" : END;
 }
 
-function afterHumanCheckpoint(state) {
-  // End the run after checkpoint state is produced to avoid self-loop recursion.
+function afterHumanCheckpoint(_state) {
   return END;
 }
 
 // ------------------------------------------------------------
-// BUILD GRAPH USING EXTERNAL NODES
+// BUILD GRAPH
 // ------------------------------------------------------------
-const graph = new StateGraph(State)
-  // Existing nodes
-  .addNode("buildProfile", profileNode)
-  .addNode("diagnoseProfile", diagnoseProfileNode)
-  .addNode("scoreCareers", scoreCareersNode)
-  .addNode("selectRecommendations", selectRecommendationsNode)
-  .addNode("retrieveRAG", ragNode)
-  .addNode("buildPlan", planNode)
-  .addNode("humanCheckpoint", humanCheckpointNode)
-  
-  // NEW nodes for chat mode
-  .addNode("chatNode", chatNode)
-  .addNode("searchNode", searchNode)
 
-  // Entry point (always buildProfile first? For chat mode we might skip buildProfile)
-  // But we keep START -> buildProfile for backward compatibility.
-  // For chat mode, we override routing at buildProfile based on mode.
-  .addEdge(START, "buildProfile")
+// FIX: Create a MemorySaver checkpointer. This replaces the manual sessions
+// Map in chat.routes.js — LangGraph persists and restores the full state
+// (messages, collectedInfo, currentPhase) automatically per thread_id.
+const checkpointer = new MemorySaver();
+
+const graph = new StateGraph(State)
+  .addNode("buildProfile",          profileNode)
+  .addNode("diagnoseProfile",       diagnoseProfileNode)
+  .addNode("scoreCareers",          scoreCareersNode)
+  .addNode("selectRecommendations", selectRecommendationsNode)
+  .addNode("retrieveRAG",           ragNode)
+  .addNode("buildPlan",             planNode)
+  .addNode("humanCheckpoint",       humanCheckpointNode)
+  .addNode("chatNode",              chatNode)
+  .addNode("searchNode",            searchNode)
+
+  .addConditionalEdges(START, routeByModeAtStart, ["buildProfile", "chatNode"])
+
   .addConditionalEdges("buildProfile", routeFromMode, [
     "diagnoseProfile",
     "retrieveRAG",
     "scoreCareers",
-    "chatNode",           // NEW: route to chatNode when mode === "chat"
   ])
 
-  // Chat mode flow
+  // Chat pipeline
   .addConditionalEdges("chatNode", routeAfterChat, ["searchNode", END])
-  .addEdge("searchNode", "buildPlan")          // After search, generate plan
-  .addEdge("buildPlan", "humanCheckpoint")     // Then HITL approval
+  .addEdge("searchNode",      "buildPlan")
+  .addEdge("buildPlan",       "humanCheckpoint")
   .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
 
-  // Existing flows
-  .addEdge("retrieveRAG", "buildPlan")
-  .addEdge("buildPlan", "humanCheckpoint")     // Already defined above, but safe
-  .addEdge("diagnoseProfile", END)
-  .addEdge("scoreCareers", "selectRecommendations")
+  // Non-chat pipelines
+  .addEdge("retrieveRAG",           "buildPlan")
+  .addEdge("diagnoseProfile",       END)
+  .addEdge("scoreCareers",          "selectRecommendations")
   .addEdge("selectRecommendations", END)
-  .compile();
+
+  // FIX: Compile with the checkpointer so LangGraph links each invoke()
+  // call to its prior state via the thread_id in config.
+  .compile({ checkpointer });
 
 // ------------------------------------------------------------
 // EXPORTED RUN FUNCTION
 // ------------------------------------------------------------
-export async function runAgentGraph(mode = "recommend", payload = {}, userApproval = null, config = {}) {
+export async function runAgentGraph(mode = "recommend", payload = {}, userApproval = null, threadId = null) {
+  // FIX: For chat mode, MemorySaver restores messages/collectedInfo/currentPhase
+  // automatically — do NOT pass them manually in input or they will conflict with
+  // the checkpointed state and cause duplication / resets.
   const input = {
     mode,
     payload,
-    userApproval: userApproval || null,
-    messages: Array.isArray(payload?.messages) ? payload.messages : [],
-    collectedInfo: payload?.collectedInfo && typeof payload.collectedInfo === "object" ? payload.collectedInfo : {},
+    userApproval: userApproval ?? null,
   };
+
+  // FIX: Pass threadId correctly as { configurable: { thread_id } }.
+  // Previously the raw string was passed as the config argument, which LangGraph
+  // silently ignores, meaning the checkpointer never linked calls to a thread.
+  const config = threadId ? { configurable: { thread_id: threadId } } : {};
 
   const result = await graph.invoke(input, config);
 
   if (mode === "analyze") {
     return {
-      profile: result.profile,
-      diagnosis: result.diagnosis,
+      profile:    result.profile,
+      diagnosis:  result.diagnosis,
       agentTrace: result.trace,
     };
   }
@@ -391,48 +391,48 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
   if (mode === "plan") {
     if (result.humanApprovalNeeded) {
       return {
-        status: "awaiting_approval",
+        status:        "awaiting_approval",
         pendingAction: result.pendingAction,
-        agentTrace: result.trace,
+        agentTrace:    result.trace,
       };
     }
     return {
-      profile: result.profile,
+      profile:    result.profile,
       ...result.plan,
       agentTrace: result.trace,
     };
   }
 
   if (mode === "chat") {
-    // If waiting for approval after plan generation
     if (result.humanApprovalNeeded) {
       return {
-        status: "awaiting_approval",
+        status:        "awaiting_approval",
         pendingAction: result.pendingAction,
-        agentTrace: result.trace,
+        agentTrace:    result.trace,
       };
     }
-    // If profile collection in progress
     if (!result.profileComplete) {
       return {
-        status: "collecting",
-        response: result.nextQuestion,
-        messages: result.messages,
+        status:        "collecting",
+        response:      result.nextQuestion,
+        messages:      result.messages,
         collectedInfo: result.collectedInfo,
-        agentTrace: result.trace,
+        currentPhase:  result.currentPhase,
+        profileComplete: false,
+        agentTrace:    result.trace,
       };
     }
-    // Final plan ready
     return {
-      status: "plan_ready",
-      plan: result.plan,
-      messages: result.messages,
+      status:        "plan_ready",
+      plan:          result.plan,
+      messages:      result.messages,
       collectedInfo: result.collectedInfo,
-      agentTrace: result.trace,
+      currentPhase:  result.currentPhase,
+      profileComplete: true,
+      agentTrace:    result.trace,
     };
   }
 
-  // Default: recommend mode
   return {
     profile: result.profile,
     ...result.recommendations,

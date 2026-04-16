@@ -1,12 +1,12 @@
-const aiService = require("../services/ai.service");
+// backend/src/controllers/profile.controller.js
+import aiService from "../services/ai.service.js";
 
-exports.analyzeProfile = async (req, res) => {
+export const analyzeProfile = async (req, res) => {
   try {
-    const rawUserData = req.body;
-    const response = await aiService.runProfileAnalysis(rawUserData);
-    return res.status(200).json(response);
+    const result = await aiService.analyzeProfile(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Profile analysis failed:", error);
-    return res.status(500).json({ error: "Profile analysis failed" });
+    console.error("Profile analysis error:", error);
+    res.status(500).json({ error: error.message });
   }
 };

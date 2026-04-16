@@ -1,64 +1,141 @@
-import { generateChatCompletion } from "../../backend/src/services/groq.service.js";
+// backend/src/agent/nodes/chatNode.js
 
-const PHASES = { GENERAL: "general", SPECIFIC: "specific", FIELD: "field", PATH: "path" };
+const PHASES = { GENERAL: 'general', SPECIFIC: 'specific', FIELD: 'field', PATH: 'path' };
+
+function extractInfo(messages) {
+  const userText = messages
+    .filter(m => m.role === 'user')
+    .map(m => m.content.toLowerCase())
+    .join(' ');
+
+  let field = null, level = null, region = null;
+
+  const fieldMap = {
+    medicine:    'Medicine',         doctor:      'Medicine',       medical:    'Medicine',
+    engineer:    'Engineering / CS', engineering: 'Engineering / CS',
+    computer:    'Engineering / CS', software:    'Engineering / CS', coding: 'Engineering / CS',
+    business:    'Business',         management:  'Business',       marketing: 'Business', finance: 'Business',
+    law:         'Law',              legal:       'Law',
+    art:         'Arts & Design',    design:      'Arts & Design',  architecture: 'Arts & Design',
+  };
+  for (const [key, val] of Object.entries(fieldMap)) {
+    if (userText.includes(key)) { field = val; break; }
+  }
+
+  if      (userText.includes('baccalaureate') || userText.includes('high school') || userText.includes('lycée') || userText.includes('bac')) level = 'Baccalaureate';
+  else if (userText.includes('bachelor')      || userText.includes('licence')     || userText.includes('undergraduate'))                     level = 'Bachelor';
+  else if (userText.includes('master')        || userText.includes('graduate'))                                                               level = 'Master';
+
+  const regions = ['casablanca', 'rabat', 'marrakech', 'fes', 'tanger', 'agadir', 'meknes'];
+  for (const r of regions) {
+    if (userText.includes(r)) { region = r.charAt(0).toUpperCase() + r.slice(1); break; }
+  }
+
+  return { fieldOfInterest: field, academicLevel: level, preferredRegion: region };
+}
 
 export async function chatNode(state) {
-  const userMessage = state.payload?.message;
-  const messages = state.messages || [];
-  const collectedInfo = state.collectedInfo || {};
-  let currentPhase = state.currentPhase || PHASES.GENERAL;
+  // Read the current user message from payload (set by chat.routes.js → runAgentGraph).
+  // state.payload.message is the ONLY new input for this turn; everything else
+  // (messages, collectedInfo, currentPhase) is restored from the MemorySaver checkpoint.
+  const userMessage      = state.payload?.message;
 
-  const updatedMessages = [...messages, { role: "user", content: userMessage }];
+  // MemorySaver has already restored the full conversation history into state.messages,
+  // so previousMessages is the accumulated transcript up to (but not including) this turn.
+  const previousMessages = state.messages      || [];
+  const collectedInfo    = state.collectedInfo  || {};
+  const currentPhase     = state.currentPhase   || PHASES.GENERAL;
 
-  if (updatedMessages.length === 1 && !userMessage) {
-    const welcome = "Hi! I'm your Moroccan university advisor. Tell me about yourself – what do you enjoy doing? Any hobbies or subjects you love?";
+  // --- Guard: no user message received ---
+  // This happens on the very first call (welcome) OR if the frontend sends an empty body.
+  // FIX: Instead of one hard-coded welcome, pick the appropriate prompt based on phase
+  // so that a missing message on a later turn doesn't reset the conversation to the start.
+  if (!userMessage) {
+    let welcome;
+    if (previousMessages.length === 0) {
+      welcome = "Hi! I'm your Moroccan university advisor. Tell me about your interests and what you'd like to study.";
+    } else if (currentPhase === PHASES.GENERAL) {
+      welcome = 'What field are you interested in? (Medicine, Engineering, Business, Law, Arts)';
+    } else if (currentPhase === PHASES.SPECIFIC) {
+      welcome = 'What is your current academic level? (Baccalaureate, Bachelor, Master)';
+    } else if (currentPhase === PHASES.FIELD) {
+      welcome = 'Which city in Morocco would you prefer to study in? (e.g., Casablanca, Rabat, Marrakech)';
+    } else {
+      welcome = 'Please continue — I\'m here to help.';
+    }
+
+    // Return ONLY the delta (the new assistant message).
+    // The concat reducer in State accumulates it into the full history automatically.
     return {
-      messages: [...updatedMessages, { role: "assistant", content: welcome }],
-      currentPhase: PHASES.GENERAL,
+      messages:        [{ role: 'assistant', content: welcome }],
+      currentPhase,
+      collectedInfo,
       profileComplete: false,
-      nextQuestion: welcome,
+      nextQuestion:    welcome,
     };
   }
 
-  const analysisPrompt = `
-    Analyze this conversation and decide the next step.
-    Phases: general (broad interests) → specific (drill down) → field (confirm exact field) → path (ready to search).
-    Extract info: interests, skills, academicLevel, preferredRegion, fieldOfInterest.
-    Transition: general→specific after a clear interest; specific→field after enough detail; field→path when field, level, region known.
-    Return JSON: { "collectedInfo": {...}, "nextPhase": "...", "nextQuestion": "...", "isComplete": bool }
-    Conversation: ${updatedMessages.map(m => `${m.role}: ${m.content}`).join("\n")}
-  `;
+  // Build the full message list for extraction (previous turns + this user turn).
+  // We need the whole history so extractInfo can see everything the user has said.
+  const allMessages = [
+    ...previousMessages,
+    { role: 'user', content: userMessage },
+  ];
 
-  let nextPhase = currentPhase, nextQuestion = "", isComplete = false, extracted = {};
-  try {
-    const response = await generateChatCompletion([
-      { role: "system", content: "You are a precise analyzer. Return only JSON." },
-      { role: "user", content: analysisPrompt }
-    ], { temperature: 0.6 });
-    const cleaned = response.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-    const result = JSON.parse(cleaned);
-    extracted = result.collectedInfo || {};
-    nextPhase = result.nextPhase || currentPhase;
-    nextQuestion = result.nextQuestion || "";
-    isComplete = result.isComplete || (nextPhase === PHASES.PATH);
-  } catch (e) {
-    // fallback manual progression
-    if (currentPhase === PHASES.GENERAL && Object.keys(collectedInfo).length > 0) nextPhase = PHASES.SPECIFIC;
-    else if (currentPhase === PHASES.SPECIFIC && collectedInfo.fieldOfInterest) nextPhase = PHASES.FIELD;
-    else if (currentPhase === PHASES.FIELD && collectedInfo.academicLevel && collectedInfo.preferredRegion) nextPhase = PHASES.PATH;
-    if (nextPhase === PHASES.PATH) isComplete = true;
-    else nextQuestion = "Could you tell me more?";
+  // Extract info from the complete conversation history.
+  const extracted = extractInfo(allMessages);
+
+  // FIX: Merge into collectedInfo using the ALREADY-PERSISTED values as base.
+  // Only overwrite a field if extraction found something NEW; otherwise keep the
+  // previously checkpointed value so progress is never lost between turns.
+  const newCollected = {
+    ...collectedInfo,
+    ...(extracted.fieldOfInterest ? { fieldOfInterest: extracted.fieldOfInterest } : {}),
+    ...(extracted.academicLevel   ? { academicLevel:   extracted.academicLevel   } : {}),
+    ...(extracted.preferredRegion ? { preferredRegion: extracted.preferredRegion } : {}),
+  };
+
+  let nextPhase    = currentPhase;
+  let nextQuestion = '';
+  let isComplete   = false;
+
+  // Phase transition logic
+  if (currentPhase === PHASES.GENERAL && newCollected.fieldOfInterest) {
+    nextPhase    = PHASES.SPECIFIC;
+    nextQuestion = `Great! You're interested in ${newCollected.fieldOfInterest}. What is your current academic level? (Baccalaureate, Bachelor, Master)`;
+  } else if (currentPhase === PHASES.SPECIFIC && newCollected.academicLevel) {
+    nextPhase    = PHASES.FIELD;
+    nextQuestion = `Thanks. Which city in Morocco would you prefer to study in? (e.g., Casablanca, Rabat, Marrakech)`;
+  } else if (currentPhase === PHASES.FIELD && newCollected.preferredRegion) {
+    nextPhase  = PHASES.PATH;
+    isComplete = true;
+  } else if (currentPhase === PHASES.GENERAL && !newCollected.fieldOfInterest) {
+    nextQuestion = 'What field are you interested in? (Medicine, Engineering, Business, Law, Arts)';
+  } else if (currentPhase === PHASES.SPECIFIC && !newCollected.academicLevel) {
+    nextQuestion = 'What is your current academic level? (Baccalaureate, Bachelor, Master)';
+  } else if (currentPhase === PHASES.FIELD && !newCollected.preferredRegion) {
+    nextQuestion = 'Which city in Morocco do you prefer?';
+  } else {
+    // Fallback: ask for the first missing piece
+    if      (!newCollected.fieldOfInterest) nextQuestion = 'What field interests you?';
+    else if (!newCollected.academicLevel)   nextQuestion = 'What is your academic level?';
+    else if (!newCollected.preferredRegion) nextQuestion = 'Which city in Morocco?';
+    else isComplete = true;
   }
 
-  const newCollected = { ...collectedInfo, ...extracted };
-  const finalMessages = [...updatedMessages];
-  if (!isComplete && nextQuestion) finalMessages.push({ role: "assistant", content: nextQuestion });
+  // FIX: Return ONLY the delta — the new user message and the new assistant reply.
+  // DO NOT spread previousMessages here; the concat reducer handles accumulation.
+  // Returning the full array would double every prior message on the next turn.
+  const deltaMessages = [{ role: 'user', content: userMessage }];
+  if (!isComplete && nextQuestion) {
+    deltaMessages.push({ role: 'assistant', content: nextQuestion });
+  }
 
   return {
-    messages: finalMessages,
-    collectedInfo: newCollected,
-    currentPhase: nextPhase,
+    messages:        deltaMessages,  // ← delta only, NOT the full array
+    collectedInfo:   newCollected,
+    currentPhase:    nextPhase,
     profileComplete: isComplete,
-    nextQuestion: isComplete ? "" : nextQuestion,
+    nextQuestion:    isComplete ? '' : nextQuestion,
   };
 }

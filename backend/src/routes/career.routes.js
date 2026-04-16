@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import * as careerController from "../controllers/career.controller.js";
+
 const router = express.Router();
-const careerController = require("../controllers/career.controller");
 
 router.post("/recommend", careerController.recommendCareers);
 
-module.exports = router;
+export default router;

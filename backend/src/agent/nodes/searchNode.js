@@ -1,4 +1,5 @@
-import { searchMoroccanUniversities } from "../../backend/src/services/tavily.service.js";
+// backend/src/agent/nodes/searchNode.js
+import { searchMoroccanUniversities } from "../../services/tavily.service.js";
 
 export async function searchNode(state) {
   const { fieldOfInterest, preferredRegion = "Morocco" } = state.collectedInfo;

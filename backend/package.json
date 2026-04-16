@@ -4,17 +4,17 @@
   "private": true,
   "description": "Node API and AI agent for the Zenix Hackathon project",
   "main": "app.js",
+  "type": "module",
   "scripts": {
     "start": "node app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@langchain/tavily": "^1.2.0",
     "@langchain/core": "^1.1.39",
     "@langchain/langgraph": "^1.2.7",
+    "@langchain/tavily": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",

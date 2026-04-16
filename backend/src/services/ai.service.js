@@ -1,19 +1,33 @@
-exports.runProfileAnalysis = async (profileData) => {
-  const { runAgentGraph } = await import("../agent/graph.mjs");
+// backend/src/services/ai.service.js
+import { runAgentGraph } from "../agent/graph.mjs";
+
+// Named exports for direct imports
+export async function runProfileAnalysis(profileData) {
   return runAgentGraph("analyze", profileData);
-};
+}
 
-exports.runCareerRecommendation = async (profileData) => {
- const { runAgentGraph } = await import("../agent/graph.mjs");
+export async function runCareerRecommendation(profileData) {
   return runAgentGraph("recommend", profileData);
-};
+}
 
-exports.runPlanGeneration = async (pathData) => {
-  const { runAgentGraph } = await import("../agent/graph.mjs");
+export async function runPlanGeneration(pathData) {
   return runAgentGraph("plan", pathData);
+}
+
+export async function runChatAdvisor(chatData) {
+  return runAgentGraph("chat", chatData);
+}
+
+// Default export for backward compatibility with controllers
+const aiService = {
+  runProfileAnalysis,
+  runCareerRecommendation,
+  runPlanGeneration,
+  runChatAdvisor,
+  // Map to names used by your controllers (e.g., analyzeProfile, recommendCareers, generatePlan)
+  analyzeProfile: runProfileAnalysis,
+  recommendCareers: runCareerRecommendation,
+  generatePlan: runPlanGeneration,
 };
 
-exports.runChatAdvisor = async (chatData) => {
-  const { runAgentGraph } = await import("../agent/graph.mjs");
-  return runAgentGraph("chat", chatData);
-};
+export default aiService;

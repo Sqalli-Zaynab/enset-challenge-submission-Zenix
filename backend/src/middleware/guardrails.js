@@ -1,58 +1,53 @@
-// Prompt injection detection (required by "Sécurité des Agents")
-const DANGEROUS_PATTERNS = [
-  /ignore previous instructions/i,
-  /system prompt/i,
-  /you are now/i,
-  /forget your rules/i,
-  /roleplay as/i,
-  /jailbreak/i,
-  /ignore all rules/i,
-  /act as if/i,
-  /bypass/i,
-  /you are an ai/i,
-  /pretend you are/i
-];
+// backend/src/middleware/guardrails.js
 
-const sanitizeInput = (text) => {
-  if (typeof text !== 'string') return '';
-  // Remove dangerous characters that could break out of context
-  return text.replace(/[<>{}[\]\\;`$]/g, '');
-};
+// Input sanitization and prompt injection detection
+function detectPromptInjection(input) {
+  const patterns = [
+    /ignore previous instructions/i,
+    /forget your rules/i,
+    /you are now DAN/i,
+    /system prompt:/i,
+    /you are an AI/i,
+    /pretend you are/i,
+    /disregard all previous/i,
+    /override your guidelines/i,
+  ];
+  return patterns.some(pattern => pattern.test(input));
+}
 
-const detectPromptInjection = (text) => {
-  if (!text) return false;
-  return DANGEROUS_PATTERNS.some(pattern => pattern.test(text));
-};
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return '';
+  // Remove any potentially harmful characters (basic)
+  return input.replace(/[<>]/g, '').trim();
+}
 
 const guardrailsMiddleware = (req, res, next) => {
-  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  // Check for prompt injection in request body (strings)
+  const checkValue = (value) => {
+    if (typeof value === 'string') {
+      if (detectPromptInjection(value)) {
+        throw new Error('Prompt injection detected');
+      }
+    }
+  };
 
-  // Check all possible user input fields
-  const userInput = body.prompt || body.message || body.query || req.query?.q;
-  
-  if (userInput && detectPromptInjection(userInput)) {
-    console.log(`[SECURITY] Prompt injection blocked: ${userInput.substring(0, 100)}`);
-    return res.status(400).json({ 
-      error: 'Security violation: Potentially malicious prompt detected',
-      blocked: true
-    });
+  try {
+    if (req.body) {
+      Object.values(req.body).forEach(checkValue);
+    }
+    if (req.query) {
+      Object.values(req.query).forEach(checkValue);
+    }
+    // Sanitize body strings (optional)
+    for (const key in req.body) {
+      if (typeof req.body[key] === 'string') {
+        req.body[key] = sanitizeInput(req.body[key]);
+      }
+    }
+    next();
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
-  
-  if (userInput) {
-    if (typeof body.prompt === 'string') {
-      req.body.prompt = sanitizeInput(body.prompt);
-    }
-
-    if (typeof body.message === 'string') {
-      req.body.message = sanitizeInput(body.message);
-    }
-
-    if (typeof body.query === 'string') {
-      req.body.query = sanitizeInput(body.query);
-    }
-  }
-  
-  next();
 };
 
-module.exports = guardrailsMiddleware;
+export default guardrailsMiddleware;

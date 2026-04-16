@@ -1,5 +1,10 @@
-const winston = require('winston');
-const path = require('path');
+// backend/utils/logger.js
+import winston from 'winston';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const logger = winston.createLogger({
   level: 'info',
@@ -43,4 +48,4 @@ logger.logSecurity = (event, details) => {
   });
 };
 
-module.exports = logger;
+export default logger;

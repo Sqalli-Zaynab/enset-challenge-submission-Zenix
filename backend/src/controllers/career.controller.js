@@ -1,12 +1,12 @@
-const aiService = require("../services/ai.service");
+// backend/src/controllers/career.controller.js
+import aiService from "../services/ai.service.js";
 
-exports.recommendCareers = async (req, res) => {
+export const recommendCareers = async (req, res) => {
   try {
-    const structuredProfile = req.body;
-    const recommendations = await aiService.runCareerRecommendation(structuredProfile);
-    return res.status(200).json(recommendations);
+    const result = await aiService.recommendCareers(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Career recommendation failed:", error);
-    return res.status(500).json({ error: "Career recommendation failed" });
+    console.error("Career recommendation error:", error);
+    res.status(500).json({ error: error.message });
   }
 };

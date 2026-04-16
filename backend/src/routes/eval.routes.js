@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { getEvaluationSummary, simulateFineTuning } from '../services/eval.service.js';
+import { generateResponse } from '../services/llm.service.js';
+
 const router = express.Router();
-const { getEvaluationSummary, simulateFineTuning } = require('../services/eval.service');
-const { generateResponse } = require('../services/llm.service');
 
 router.get('/summary', (req, res) => {
   res.json(getEvaluationSummary());
@@ -26,4 +27,4 @@ router.post('/finetune', async (req, res) => {
   res.json(result);
 });
 
-module.exports = router;
+export default router;

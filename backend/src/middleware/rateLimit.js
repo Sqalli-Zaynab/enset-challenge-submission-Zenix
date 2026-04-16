@@ -1,19 +1,20 @@
-const rateLimit = require('express-rate-limit');
+// backend/src/middleware/rateLimit.js
+import rateLimit from 'express-rate-limit';
 
 // General limiter for all routes
-const generalLimiter = rateLimit({
+export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requests per IP
-  message: { error: 'Too many requests, please try again later' },
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
 
-// Stricter limiter for AI/plan endpoints
-const aiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // 30 AI requests per hour
-  message: { error: 'AI endpoint limit reached. Please wait.' }
+// Stricter limiter for AI endpoints (Groq/Tavily)
+export const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // limit each IP to 10 requests per minute
+  message: 'Too many AI requests. Please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
-
-module.exports = { generalLimiter, aiLimiter };
