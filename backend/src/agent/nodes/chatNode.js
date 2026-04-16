@@ -1,5 +1,5 @@
 // backend/src/agent/nodes/chatNode.js
-import { getLLMResponse } from '../services/llm.service.js';
+import { getLLMResponse } from '../../services/llm.service.js';
 
 const PHASES = { GENERAL: 'general', SPECIFIC: 'specific', FIELD: 'field', PATH: 'path' };
 

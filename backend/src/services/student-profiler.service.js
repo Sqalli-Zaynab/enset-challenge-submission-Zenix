@@ -1,45 +1,18 @@
 import { extractStructuredInfo } from './llm-extraction.service.js';
 
-<<<<<<< HEAD
-export async function buildStudentProfile(messages = [], previous = {}) {
-  const extracted = await extractStructuredInfo(messages);
-
-  const profile = {
-    ...previous,
-    ...extracted,
-    fieldOfInterest: extracted.fieldOfInterest || previous.fieldOfInterest,
-    academicLevel: extracted.academicLevel || previous.academicLevel,
-    preferredRegion: extracted.preferredRegion || previous.preferredRegion,
-    preferredLanguage: extracted.preferredLanguage || previous.preferredLanguage,
-    institutionType: extracted.institutionType || previous.institutionType,
-    budgetMAD: extracted.budgetMAD || previous.budgetMAD,
-  };
-
-  const missing = [
-    !profile.fieldOfInterest ? "fieldOfInterest" : null,
-    !profile.academicLevel ? "academicLevel" : null,
-    !profile.preferredRegion ? "preferredRegion" : null,
-    !profile.preferredLanguage ? "preferredLanguage" : null,
-    !profile.institutionType ? "institutionType" : null,
-    !profile.budgetMAD ? "budgetMAD" : null,
-  ].filter(Boolean);
-
-  const completenessScore = Math.max(0, 100 - missing.length * 12);
-
-  return {
-    ...profile,
-    missing,
-    completenessScore,
-  };
+function normalizeText(value = '') {
+  return String(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 }
 
-export function getProfileSummary(profile) {
-=======
 function uniqStrings(values = []) {
   return Array.from(
     new Set(
       values
-        .filter((item) => typeof item === "string")
+        .filter((item) => typeof item === 'string')
         .map((item) => item.trim())
         .filter(Boolean),
     ),
@@ -47,7 +20,7 @@ function uniqStrings(values = []) {
 }
 
 function normalizeScore(value) {
-  if (value === null || value === undefined || value === "") return null;
+  if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(1, Math.min(5, Math.round(n)));
@@ -55,10 +28,10 @@ function normalizeScore(value) {
 
 function normalizeBoolean(value) {
   if (value === true || value === false) return value;
-  if (typeof value !== "string") return null;
+  if (typeof value !== 'string') return null;
   const v = normalizeText(value);
-  if (["yes", "true", "oui", "possible", "can", "y", "1"].includes(v)) return true;
-  if (["no", "false", "non", "impossible", "cannot", "n", "0"].includes(v)) return false;
+  if (['yes', 'true', 'oui', 'possible', 'can', 'y', '1'].includes(v)) return true;
+  if (['no', 'false', 'non', 'impossible', 'cannot', 'n', '0'].includes(v)) return false;
   return null;
 }
 
@@ -75,7 +48,7 @@ function extractBudget(text) {
 function extractAverage(text) {
   const match = text.match(/(\d{1,2}(?:[\.,]\d+)?)\s*\/\s*20/i);
   if (!match) return null;
-  return Number(String(match[1]).replace(",", "."));
+  return Number(String(match[1]).replace(',', '.'));
 }
 
 function extractStringScore(text, rules = []) {
@@ -86,7 +59,7 @@ function extractStringScore(text, rules = []) {
 }
 
 function mergeValue(previous, next) {
-  if (next === null || next === undefined || next === "") return previous ?? null;
+  if (next === null || next === undefined || next === '') return previous ?? null;
   return next;
 }
 
@@ -119,12 +92,11 @@ export function createEmptyStudentProfile() {
 }
 
 export function sanitizeProfileUpdates(value = {}) {
-  const raw = value && typeof value === "object" ? value : {};
-
+  const raw = value && typeof value === 'object' ? value : {};
   return {
-    fieldOfInterest: typeof raw.fieldOfInterest === "string" ? raw.fieldOfInterest.trim() : null,
-    careerGoal: typeof raw.careerGoal === "string" ? raw.careerGoal.trim() : null,
-    academicLevel: typeof raw.academicLevel === "string" ? raw.academicLevel.trim() : null,
+    fieldOfInterest: typeof raw.fieldOfInterest === 'string' ? raw.fieldOfInterest.trim() : null,
+    careerGoal: typeof raw.careerGoal === 'string' ? raw.careerGoal.trim() : null,
+    academicLevel: typeof raw.academicLevel === 'string' ? raw.academicLevel.trim() : null,
     academicAverage:
       raw.academicAverage !== undefined && raw.academicAverage !== null
         ? Number(raw.academicAverage)
@@ -134,12 +106,12 @@ export function sanitizeProfileUpdates(value = {}) {
     familySupport: normalizeScore(raw.familySupport),
     mobility: normalizeScore(raw.mobility),
     riskTolerance: normalizeScore(raw.riskTolerance),
-    preferredRegion: typeof raw.preferredRegion === "string" ? raw.preferredRegion.trim() : null,
+    preferredRegion: typeof raw.preferredRegion === 'string' ? raw.preferredRegion.trim() : null,
     preferredLanguage:
-      typeof raw.preferredLanguage === "string" ? raw.preferredLanguage.trim() : null,
-    institutionType:
-      typeof raw.institutionType === "string" ? raw.institutionType.trim() : null,
-    budgetMAD: raw.budgetMAD !== undefined && raw.budgetMAD !== null ? Number(raw.budgetMAD) : null,
+      typeof raw.preferredLanguage === 'string' ? raw.preferredLanguage.trim() : null,
+    institutionType: typeof raw.institutionType === 'string' ? raw.institutionType.trim() : null,
+    budgetMAD:
+      raw.budgetMAD !== undefined && raw.budgetMAD !== null ? Number(raw.budgetMAD) : null,
     financialAidNeeded: normalizeBoolean(raw.financialAidNeeded),
     workWhileStudying: normalizeBoolean(raw.workWhileStudying),
     needsFlexibleSchedule: normalizeBoolean(raw.needsFlexibleSchedule),
@@ -147,13 +119,12 @@ export function sanitizeProfileUpdates(value = {}) {
     strengths: uniqStrings(Array.isArray(raw.strengths) ? raw.strengths : []),
     interests: uniqStrings(Array.isArray(raw.interests) ? raw.interests : []),
     constraints: uniqStrings(Array.isArray(raw.constraints) ? raw.constraints : []),
-    evidence: raw.evidence && typeof raw.evidence === "object" ? raw.evidence : {},
+    evidence: raw.evidence && typeof raw.evidence === 'object' ? raw.evidence : {},
   };
 }
 
 export function mergeStudentProfile(previous = createEmptyStudentProfile(), updates = {}) {
   const next = sanitizeProfileUpdates(updates);
-
   return {
     ...previous,
     fieldOfInterest: mergeValue(previous.fieldOfInterest, next.fieldOfInterest),
@@ -191,17 +162,17 @@ export function mergeStudentProfile(previous = createEmptyStudentProfile(), upda
 
 export function computeMissingDimensions(profile = {}) {
   return [
-    !profile.fieldOfInterest ? "fieldOfInterest" : null,
-    !profile.academicLevel ? "academicLevel" : null,
-    profile.academicConfidence == null ? "academicConfidence" : null,
-    !profile.preferredRegion ? "preferredRegion" : null,
-    !profile.preferredLanguage ? "preferredLanguage" : null,
-    !profile.institutionType ? "institutionType" : null,
-    profile.budgetMAD == null ? "budgetMAD" : null,
-    profile.psychologicalReadiness == null ? "psychologicalReadiness" : null,
-    profile.familySupport == null ? "familySupport" : null,
-    profile.mobility == null ? "mobility" : null,
-    profile.riskTolerance == null ? "riskTolerance" : null,
+    !profile.fieldOfInterest ? 'fieldOfInterest' : null,
+    !profile.academicLevel ? 'academicLevel' : null,
+    profile.academicConfidence == null ? 'academicConfidence' : null,
+    !profile.preferredRegion ? 'preferredRegion' : null,
+    !profile.preferredLanguage ? 'preferredLanguage' : null,
+    !profile.institutionType ? 'institutionType' : null,
+    profile.budgetMAD == null ? 'budgetMAD' : null,
+    profile.psychologicalReadiness == null ? 'psychologicalReadiness' : null,
+    profile.familySupport == null ? 'familySupport' : null,
+    profile.mobility == null ? 'mobility' : null,
+    profile.riskTolerance == null ? 'riskTolerance' : null,
   ].filter(Boolean);
 }
 
@@ -224,54 +195,52 @@ export function finalizeStudentProfile(profile = {}) {
   };
 }
 
-function fallbackLexicalExtraction(text = "") {
+function fallbackLexicalExtraction(text = '') {
   const fieldMap = {
-    medicine: ["médecine", "medecine", "medicine", "doctor", "médecin"],
+    medicine: ['medecine', 'medicine', 'doctor', 'medecin'],
     engineering: [
-      "ingénierie",
-      "ingenierie",
-      "engineering",
-      "informatique",
-      "software",
-      "computer science",
-      "ai",
-      "ia",
-      "cyber",
-      "réseaux",
-      "reseaux",
+      'ingenierie',
+      'engineering',
+      'informatique',
+      'software',
+      'computer science',
+      'ai',
+      'ia',
+      'cyber',
+      'reseaux',
     ],
-    business: ["commerce", "business", "management", "finance", "marketing", "entrepreneur"],
-    law: ["droit", "law", "juridique"],
-    arts: ["art", "design", "architecture", "cinéma", "cinema", "audiovisuel"],
+    business: ['commerce', 'business', 'management', 'finance', 'marketing', 'entrepreneur'],
+    law: ['droit', 'law', 'juridique'],
+    arts: ['art', 'design', 'architecture', 'cinema', 'audiovisuel'],
   };
 
   const levelMap = {
-    baccalaureate: ["bac", "baccalauréat", "baccalaureat", "2bac", "terminale"],
-    bachelor: ["licence", "bachelor", "deug", "dut", "ts"],
-    master: ["master", "mastère", "mastere", "mba"],
+    baccalaureate: ['bac', 'baccalaureat', '2bac', 'terminale'],
+    bachelor: ['licence', 'bachelor', 'deug', 'dut', 'ts'],
+    master: ['master', 'mastere', 'mba'],
   };
 
   const regionMap = {
-    casablanca: ["casablanca", "casa"],
-    rabat: ["rabat", "salé", "sale"],
-    marrakech: ["marrakech", "kech"],
-    fes: ["fès", "fes"],
-    tanger: ["tanger", "طنجة"],
-    agadir: ["agadir"],
-    oujda: ["oujda"],
-    meknes: ["meknès", "meknes"],
+    casablanca: ['casablanca', 'casa'],
+    rabat: ['rabat', 'sale'],
+    marrakech: ['marrakech', 'kech'],
+    fes: ['fes'],
+    tanger: ['tanger'],
+    agadir: ['agadir'],
+    oujda: ['oujda'],
+    meknes: ['meknes'],
   };
 
   const languageMap = {
-    fr: ["français", "francais", "french"],
-    en: ["anglais", "english"],
-    ar: ["arabe", "arabic"],
+    fr: ['francais', 'french'],
+    en: ['anglais', 'english'],
+    ar: ['arabe', 'arabic'],
   };
 
   const institutionTypeMap = {
-    public: ["public", "publique"],
-    private: ["privé", "prive", "private"],
-    any: ["peu importe", "any", "n'importe"],
+    public: ['public', 'publique'],
+    private: ['prive', 'private'],
+    any: ['peu importe', 'any', "n'importe"],
   };
 
   let fieldOfInterest = null;
@@ -283,65 +252,60 @@ function fallbackLexicalExtraction(text = "") {
   for (const [key, words] of Object.entries(fieldMap)) {
     if (!fieldOfInterest && containsOne(text, words)) fieldOfInterest = key;
   }
-
   for (const [key, words] of Object.entries(levelMap)) {
     if (!academicLevel && containsOne(text, words)) academicLevel = key;
   }
-
   for (const [key, words] of Object.entries(regionMap)) {
     if (!preferredRegion && containsOne(text, words)) preferredRegion = key;
   }
-
   for (const [key, words] of Object.entries(languageMap)) {
     if (!preferredLanguage && containsOne(text, words)) preferredLanguage = key;
   }
-
   for (const [key, words] of Object.entries(institutionTypeMap)) {
     if (!institutionType && containsOne(text, words)) institutionType = key;
   }
 
   const academicAverage = extractAverage(text);
   const budgetMAD = extractBudget(text);
-
   const academicConfidence = extractStringScore(text, [
-    { words: ["excellent", "très bon", "major", "16/20", "17/20", "18/20"], value: 5 },
-    { words: ["bon niveau", "14/20", "15/20"], value: 4 },
-    { words: ["moyen", "12/20", "13/20"], value: 3 },
-    { words: ["faible", "10/20", "11/20", "difficile scolairement"], value: 2 },
+    { words: ['excellent', 'tres bon', 'major', '16/20', '17/20', '18/20'], value: 5 },
+    { words: ['bon niveau', '14/20', '15/20'], value: 4 },
+    { words: ['moyen', '12/20', '13/20'], value: 3 },
+    { words: ['faible', '10/20', '11/20', 'difficile scolairement'], value: 2 },
   ]);
 
   const psychologicalReadiness = extractStringScore(text, [
-    { words: ["motivé", "motivée", "confiant", "confiante", "ambitieux", "ambitieuse"], value: 5 },
-    { words: ["stressé", "stressée", "anxieux", "anxieuse", "perdu", "perdue", "burnout"], value: 2 },
-    { words: ["j'hésite", "je ne sais pas", "indécis", "indecis"], value: 2 },
+    { words: ['motive', 'confiant', 'ambitieux'], value: 5 },
+    { words: ['stresse', 'anxieux', 'perdu', 'burnout'], value: 2 },
+    { words: ["j'hesite", 'je ne sais pas', 'indecis'], value: 2 },
   ]);
 
   const familySupport = extractStringScore(text, [
-    { words: ["mes parents soutiennent", "famille soutient", "encouragé"], value: 5 },
-    { words: ["pas de soutien", "famille refuse", "pression familiale"], value: 2 },
+    { words: ['mes parents soutiennent', 'famille soutient', 'encourage'], value: 5 },
+    { words: ['pas de soutien', 'famille refuse', 'pression familiale'], value: 2 },
   ]);
 
   const mobility = extractStringScore(text, [
-    { words: ["je peux déménager", "je peux bouger", "n'importe quelle ville"], value: 5 },
-    { words: ["je dois rester", "pas loin", "je préfère rester"], value: 2 },
+    { words: ['je peux demenager', 'je peux bouger', "n'importe quelle ville"], value: 5 },
+    { words: ['je dois rester', 'pas loin', 'je prefere rester'], value: 2 },
   ]);
 
   const riskTolerance = extractStringScore(text, [
-    { words: ["très sélectif", "je suis prêt à tenter", "concours difficile"], value: 5 },
-    { words: ["je veux quelque chose de sûr", "sans risque", "garanti"], value: 2 },
+    { words: ['tres selectif', 'je suis pret a tenter', 'concours difficile'], value: 5 },
+    { words: ['je veux quelque chose de sur', 'sans risque', 'garanti'], value: 2 },
   ]);
 
   const constraints = uniqStrings([
-    text.includes("travail") || text.includes("job") ? "needs_flexible_schedule" : null,
-    text.includes("transport") ? "transport_sensitive" : null,
-    text.includes("handicap") ? "accessibility_needed" : null,
-    text.includes("bourse") ? "needs_scholarship" : null,
+    text.includes('travail') || text.includes('job') ? 'needs_flexible_schedule' : null,
+    text.includes('transport') ? 'transport_sensitive' : null,
+    text.includes('handicap') ? 'accessibility_needed' : null,
+    text.includes('bourse') ? 'needs_scholarship' : null,
   ]);
 
-  const financialAidNeeded = text.includes("bourse") ? true : null;
-  const workWhileStudying = text.includes("travail") || text.includes("job") ? true : null;
-  const needsFlexibleSchedule = text.includes("travail") || text.includes("job") ? true : null;
-  const accessibilityNeeds = text.includes("handicap") ? true : null;
+  const financialAidNeeded = text.includes('bourse') ? true : null;
+  const workWhileStudying = text.includes('travail') || text.includes('job') ? true : null;
+  const needsFlexibleSchedule = text.includes('travail') || text.includes('job') ? true : null;
+  const accessibilityNeeds = text.includes('handicap') ? true : null;
 
   return sanitizeProfileUpdates({
     fieldOfInterest,
@@ -364,39 +328,45 @@ function fallbackLexicalExtraction(text = "") {
   });
 }
 
-export function buildStudentProfile(messages = [], previous = {}) {
+export async function buildStudentProfile(messages = [], previous = {}) {
   const previousProfile = finalizeStudentProfile({
     ...createEmptyStudentProfile(),
     ...(previous || {}),
   });
 
-  const text = messages
-    .filter((m) => m.role === "user")
-    .map((m) => normalizeText(m.content || ""))
-    .join(" ");
+  const safeMessages = Array.isArray(messages) ? messages.slice(-8) : [];
+  const recentUserText = safeMessages
+    .filter((m) => m?.role === 'user')
+    .map((m) => normalizeText(m.content || ''))
+    .join(' ')
+    .slice(-2500);
 
-  const fallback = fallbackLexicalExtraction(text);
-  return finalizeStudentProfile(mergeStudentProfile(previousProfile, fallback));
+  const llmUpdates = await extractStructuredInfo(safeMessages);
+  const lexicalUpdates = fallbackLexicalExtraction(recentUserText);
+
+  const merged = mergeStudentProfile(
+    mergeStudentProfile(previousProfile, lexicalUpdates),
+    llmUpdates,
+  );
+
+  return finalizeStudentProfile(merged);
 }
 
 export function getProfileSummary(profile = {}) {
->>>>>>> 93b2b273f45d6dff70610cb571cad55226f10e49
+  const readinessBand =
+    profile.psychologicalReadiness != null && profile.academicConfidence != null
+      ? profile.psychologicalReadiness >= 4 && profile.academicConfidence >= 4
+        ? 'strong'
+        : profile.psychologicalReadiness <= 2 || profile.academicConfidence <= 2
+          ? 'fragile'
+          : 'moderate'
+      : 'unknown';
+
   return {
     studyField: profile.fieldOfInterest,
     level: profile.academicLevel,
     cityPreference: profile.preferredRegion,
     budgetMAD: profile.budgetMAD,
-<<<<<<< HEAD
-    readinessBand: "moderate", // can be removed or computed dynamically if needed
-=======
-    readinessBand:
-      profile.psychologicalReadiness != null && profile.academicConfidence != null
-        ? profile.psychologicalReadiness >= 4 && profile.academicConfidence >= 4
-          ? "strong"
-          : profile.psychologicalReadiness <= 2 || profile.academicConfidence <= 2
-            ? "fragile"
-            : "moderate"
-        : "unknown",
->>>>>>> 93b2b273f45d6dff70610cb571cad55226f10e49
+    readinessBand,
   };
 }

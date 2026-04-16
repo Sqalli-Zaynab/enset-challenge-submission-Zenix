@@ -17,14 +17,13 @@ const tavily = hasTavily
 function buildQueries(profile) {
   const field = profile.fieldOfInterest || "higher education";
   const city = profile.preferredRegion || "Morocco";
-  const level = profile.academicLevel || "student";
+  const type = profile.institutionType || "any";
   const language = profile.preferredLanguage || "fr";
-  const institutionType = profile.institutionType || "any";
 
   return [
-    `${field} ${city} Maroc université admission site officiel`,
-    `${field} ${city} Maroc concours inscription frais ${institutionType}`,
-    `${field} ${level} ${city} Maroc études ${language} université`,
+    `${field} ${city} Maroc université site officiel admission`,
+    `${field} ${city} Maroc école ${type} inscription`,
+    `${field} ${city} Maroc programme ${language} site officiel`,
   ];
 }
 
@@ -44,6 +43,7 @@ export async function searchMoroccanUniversitiesForProfile(profile) {
             snippet: "Mock result. Configure TAVILY_API_KEY for real-time search.",
             score: 1,
             official: false,
+            sourceType: "web_source",
           },
         ],
         profile,
@@ -56,7 +56,11 @@ export async function searchMoroccanUniversitiesForProfile(profile) {
   for (const query of queries) {
     try {
       const raw = await tavily.invoke({ query });
-      merged.push(...normalizeSearchResults(raw));
+      const normalized = normalizeSearchResults(raw).map((item) => ({
+        ...item,
+        sourceType: "web_source",
+      }));
+      merged.push(...normalized);
     } catch (error) {
       console.error("Tavily search error:", error.message);
     }

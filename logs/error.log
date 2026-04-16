@@ -5,3 +5,6 @@
 {"level":"error","message":"Error: Cannot read properties of undefined (reading 'prompt')","timestamp":"2026-04-16T05:18:43.321Z"}
 {"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:18:47.844Z"}
 {"level":"error","message":"Error: Expected property name or '}' in JSON at position 1 (line 1 column 2)","timestamp":"2026-04-16T05:19:46.199Z"}
+{"level":"error","message":"Error: ENOENT: no such file or directory, open 'C:\\Users\\lenovo\\enset-challenge-submission-Zenix\\backend\\data\\knowledge\\morocco-universities.json'","timestamp":"2026-04-16T19:15:01.988Z"}
+{"level":"error","message":"Error: ENOENT: no such file or directory, open 'C:\\Users\\lenovo\\enset-challenge-submission-Zenix\\backend\\data\\knowledge\\morocco-universities.json'","timestamp":"2026-04-16T19:17:47.071Z"}
+{"level":"error","message":"Error: ENOENT: no such file or directory, open 'C:\\Users\\lenovo\\enset-challenge-submission-Zenix\\backend\\data\\knowledge\\morocco-universities.json'","timestamp":"2026-04-16T19:22:23.344Z"}

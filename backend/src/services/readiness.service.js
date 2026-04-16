@@ -1,53 +1,54 @@
-export function evaluateInterviewReadiness(profile = {}) {
-  const missingCritical = [
-    !profile.fieldOfInterest ? "fieldOfInterest" : null,
-    !profile.academicLevel ? "academicLevel" : null,
-    profile.academicConfidence == null ? "academicConfidence" : null,
-    !profile.preferredRegion ? "preferredRegion" : null,
-    !profile.preferredLanguage ? "preferredLanguage" : null,
-    !profile.institutionType ? "institutionType" : null,
-    profile.budgetMAD == null ? "budgetMAD" : null,
-  ].filter(Boolean);
+function hasAcademicSignal(profile = {}) {
+  return profile.academicConfidence != null || profile.academicAverage != null;
+}
 
-  const missingPsychological = [
-    profile.psychologicalReadiness == null ? "psychologicalReadiness" : null,
-    profile.familySupport == null ? "familySupport" : null,
-    profile.riskTolerance == null ? "riskTolerance" : null,
-  ].filter(Boolean);
+function hasBudgetSignal(profile = {}) {
+  return profile.budgetMAD != null || profile.financialAidNeeded != null;
+}
 
-  const missingLogistics = [
-    profile.mobility == null ? "mobility" : null,
-    profile.workWhileStudying == null ? "workWhileStudying" : null,
-  ].filter(Boolean);
-  const academicKnown = Boolean(profile.academicLevel && profile.academicConfidence != null);
-  const economicKnown = Boolean(profile.budgetMAD != null);
-  const psychologicalKnown = missingPsychological.length <= 1;
-  const logisticsKnown = missingLogistics.length <= 1;
-  const directionKnown = Boolean(profile.fieldOfInterest || profile.careerGoal);
+export function evaluateInterviewReadiness(
+  profile = {},
+  { questionCount = 0, maxQuestions = 10 } = {},
+) {
+  const coverageChecks = {
+    fieldOfInterest: Boolean(profile.fieldOfInterest),
+    academicLevel: Boolean(profile.academicLevel),
+    academicStrength: hasAcademicSignal(profile),
+    preferredRegion: Boolean(profile.preferredRegion),
+    institutionType: Boolean(profile.institutionType),
+    budget: hasBudgetSignal(profile),
+    preferredLanguage: Boolean(profile.preferredLanguage),
+    riskStyle: profile.riskTolerance != null,
+    mobility: profile.mobility != null,
+  };
 
-  const ready =
-    missingCritical.length === 0 &&
-    academicKnown &&
-    economicKnown &&
-    psychologicalKnown &&
-    logisticsKnown &&
-    directionKnown;
-const coverageScore = [
-    directionKnown,
-    academicKnown,
-    economicKnown,
-    psychologicalKnown,
-    logisticsKnown,
-    Boolean(profile.preferredLanguage),
-    Boolean(profile.institutionType),
-  ].filter(Boolean).length * 14;
+  const covered = Object.values(coverageChecks).filter(Boolean).length;
+  const coverageScore = Math.round((covered / Object.keys(coverageChecks).length) * 100);
+
+  const missingCore = Object.entries(coverageChecks)
+    .filter(([, ok]) => !ok)
+    .map(([key]) => key);
+
+  const softReady =
+    covered >= 6 &&
+    Boolean(profile.fieldOfInterest) &&
+    Boolean(profile.academicLevel) &&
+    Boolean(profile.preferredRegion);
+
+  const maxQuestionsReached = questionCount >= maxQuestions;
+  const ready = softReady || maxQuestionsReached;
 
   return {
     ready,
-    coverageScore: Math.min(100, coverageScore),
-    missingCritical,
-    missingPsychological,
-    missingLogistics,
-    interviewStage: ready ? "planning" : coverageScore >= 70 ? "deepening" : "discovery",
+    softReady,
+    maxQuestionsReached,
+    coverageScore,
+    missingCore,
+    interviewStage: ready ? "planning" : coverageScore >= 45 ? "focusing" : "discovery",
+    finalizeReason: softReady
+      ? "enough_information"
+      : maxQuestionsReached
+        ? "max_questions_reached"
+        : null,
   };
 }

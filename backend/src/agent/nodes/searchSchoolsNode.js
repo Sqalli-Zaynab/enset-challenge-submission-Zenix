@@ -5,11 +5,10 @@ export async function searchSchoolsNode(state) {
   const search = await searchMoroccanUniversitiesForProfile(profile);
 
   return {
-    rawSources: search.results,
-    searchQueries: search.queries,
+    rawSources: search.results || [],
+    searchQueries: search.queries || [],
     trace: [
-      `SearchSchools: queries=${search.queries.length}`,
-      `SearchSchools: results=${search.results.length}`,
+      `SearchSchools: web=${(search.results || []).length}`,
       `SearchSchools: mock=${search.isMock}`,
     ],
   };

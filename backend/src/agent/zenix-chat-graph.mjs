@@ -4,27 +4,34 @@ import { dynamicQuestionNode } from "./nodes/dynamicQuestionNode.js";
 import { searchSchoolsNode } from "./nodes/searchSchoolsNode.js";
 import { verifySourcesNode } from "./nodes/verifySourcesNode.js";
 import { buildStudyPlanNode } from "./nodes/buildStudyPlanNode.js";
+const MAX_MESSAGES = 12;
+const MAX_TRACE = 30;
 
 const State = Annotation.Root({
-  mode: Annotation({ reducer: (_l, r) => r, default: () => "chat" }),
+  mode: Annotation({ reducer: (_l, r) => r, default: () => 'chat' }),
   payload: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
-  messages: Annotation({ reducer: (l, r) => l.concat(r || []), default: () => [] }),
+  messages: Annotation({
+    reducer: (l, r) => [...(l || []), ...(r || [])].slice(-MAX_MESSAGES),
+    default: () => [],
+  }),
   studentProfile: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
   studentSummary: Annotation({ reducer: (_l, r) => r, default: () => null }),
-  nextQuestion: Annotation({ reducer: (_l, r) => r, default: () => "" }),
+  nextQuestion: Annotation({ reducer: (_l, r) => r, default: () => '' }),
   readyForSearch: Annotation({ reducer: (_l, r) => r, default: () => false }),
   readyForPlan: Annotation({ reducer: (_l, r) => r, default: () => false }),
   interviewAssessment: Annotation({ reducer: (_l, r) => r, default: () => null }),
   confidenceByDimension: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
   detectedSignals: Annotation({ reducer: (_l, r) => r, default: () => [] }),
-  reasoningSummary: Annotation({ reducer: (_l, r) => r, default: () => "" }),
+  reasoningSummary: Annotation({ reducer: (_l, r) => r, default: () => '' }),
   rawSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   verifiedSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
- searchQueries: Annotation({ reducer: (_l, r) => r, default: () => [] }),
+  searchQueries: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   plan: Annotation({ reducer: (_l, r) => r, default: () => null }),
-  trace: Annotation({ reducer: (l, r) => l.concat(r || []), default: () => [] }),
+  trace: Annotation({
+    reducer: (l, r) => [...(l || []), ...(r || [])].slice(-MAX_TRACE),
+    default: () => [],
+  }),
 });
-
 function inputNode(state) {
   const message = state.payload?.message?.trim() || "";
 
@@ -34,15 +41,18 @@ function inputNode(state) {
         {
           role: "assistant",
           content:
-            "Salut 👋 Je vais t’aider à choisir une voie réaliste. Pour commencer, parle-moi du domaine qui t’attire le plus et de ta situation actuelle.",
+            "Salut 👋 Je vais te poser quelques questions rapides puis te proposer des parcours et des établissements compatibles.",
         },
       ],
       trace: ["InputNode: welcome turn"],
+      maxQuestions: 10,
     };
   }
-   return {
+
+  return {
     messages: [{ role: "user", content: message }],
     trace: ["InputNode: user message appended"],
+    maxQuestions: 10,
   };
 }
 
@@ -87,10 +97,14 @@ export async function runZenixChatGraph(payload = {}, threadId = null) {
       confidenceByDimension: result.confidenceByDimension,
       detectedSignals: result.detectedSignals,
       reasoningSummary: result.reasoningSummary,
+      questionCount: result.questionCount,
+      maxQuestions: result.maxQuestions,
+      finalizeReason: result.finalizeReason,
       agentTrace: result.trace,
     };
   }
- return {
+
+  return {
     status: "plan_ready",
     plan: result.plan,
     searchQueries: result.searchQueries,
@@ -102,6 +116,9 @@ export async function runZenixChatGraph(payload = {}, threadId = null) {
     confidenceByDimension: result.confidenceByDimension,
     detectedSignals: result.detectedSignals,
     reasoningSummary: result.reasoningSummary,
+    questionCount: result.questionCount,
+    maxQuestions: result.maxQuestions,
+    finalizeReason: result.finalizeReason,
     agentTrace: result.trace,
   };
 }

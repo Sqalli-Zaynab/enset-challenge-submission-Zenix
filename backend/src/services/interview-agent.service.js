@@ -18,7 +18,8 @@ function safeParseJson(text) {
       // ignore
     }
   }
-   const start = text.indexOf("{");
+
+  const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
 
@@ -39,78 +40,70 @@ function sanitizeConfidenceMap(value = {}) {
       out[key] = Math.max(0, Math.min(1, n));
     }
   }
+
   return out;
 }
 
-function getConversationWindow(messages = [], limit = 10) {
+function getConversationWindow(messages = [], limit = 8) {
   return messages.slice(-limit).map((m) => ({
     role: m.role,
     content: m.content,
   }));
 }
 
-export async function runInterviewTurn({ messages = [], currentProfile = {} }) {
+export async function runInterviewTurn({
+  messages = [],
+  currentProfile = {},
+  questionCount = 0,
+  maxQuestions = 10,
+}) {
   const current = finalizeStudentProfile(currentProfile || {});
-  const currentReadiness = evaluateInterviewReadiness(current);
- const systemPrompt = `
-You are Zenix, an empathic but rigorous Moroccan university and career orientation interviewer.
-Your job is NOT to jump quickly to schools.
-Your job is to understand the student deeply before planning.
+  const currentReadiness = evaluateInterviewReadiness(current, {
+    questionCount,
+    maxQuestions,
+  });
 
-You must reason about these dimensions:
-- fieldOfInterest
-- careerGoal
-- academicLevel
-- academicAverage
-- academicConfidence (1-5)
-- psychologicalReadiness (1-5)
-- familySupport (1-5)
-- mobility (1-5)
-- riskTolerance (1-5)
-- preferredRegion
-- preferredLanguage
-- institutionType
-- budgetMAD
-- financialAidNeeded (true/false)
-- workWhileStudying (true/false)
-- needsFlexibleSchedule (true/false)
-- accessibilityNeeds (true/false)
-- strengths (array)
-- interests (array)
-- constraints (array)
+  if (currentReadiness.ready) {
+    return {
+      updatedProfile: current,
+      confidenceByDimension: {},
+      detectedSignals: [],
+      reasoningSummary: `Quick scan complete: ${currentReadiness.finalizeReason}`,
+      nextQuestion: "",
+      interviewReady: true,
+      interviewAssessment: currentReadiness,
+    };
+  }
+
+  const systemPrompt = `
+You are Zenix, a fast university guidance interviewer.
+You must ask ONLY ONE simple question at a time.
+Never ask two questions in one prompt.
+Never ask intimate or overly technical questions.
+The objective is a quick scan, not a deep interview.
 
 Rules:
-- Ask ONE best next question only.
-- Prefer the most informative question.
-- Do not ask generic repeated questions.
-- If the student has not shared psychological, family, risk, mobility or budget info, actively try to discover them.
-- Keep the question natural, short, and conversational.
+- Ask one atomic question only.
+- Keep it short and practical.
+- Use information already known.
+- If enough information exists, ask nothing and finalize.
 - Return ONLY valid JSON.
 
-JSON schema:
+Return JSON schema:
 {
   "profileUpdates": {
     "fieldOfInterest": null,
-    "careerGoal": null,
     "academicLevel": null,
     "academicAverage": null,
     "academicConfidence": null,
-    "psychologicalReadiness": null,
-    "familySupport": null,
-    "mobility": null,
-    "riskTolerance": null,
     "preferredRegion": null,
     "preferredLanguage": null,
     "institutionType": null,
     "budgetMAD": null,
     "financialAidNeeded": null,
-    "workWhileStudying": null,
-    "needsFlexibleSchedule": null,
-    "accessibilityNeeds": null,
-    "strengths": [],
-    "interests": [],
-    "constraints": [],
-    "evidence": {}
+    "mobility": null,
+    "riskTolerance": null,
+    "constraints": []
   },
   "confidenceByDimension": {
     "fieldOfInterest": 0.9
@@ -122,12 +115,15 @@ JSON schema:
 `;
 
   const userPrompt = `
+Question count so far: ${questionCount}/${maxQuestions}
+
 Current profile:
 ${JSON.stringify(current, null, 2)}
+
 Current readiness:
 ${JSON.stringify(currentReadiness, null, 2)}
 
-Conversation history:
+Recent conversation:
 ${JSON.stringify(getConversationWindow(messages), null, 2)}
 `;
 
@@ -136,19 +132,29 @@ ${JSON.stringify(getConversationWindow(messages), null, 2)}
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    { temperature: 0.2, max_tokens: 1600 },
+    { temperature: 0.1, max_tokens: 900 },
   );
 
   const parsed = safeParseJson(raw);
   const parsedUpdates = sanitizeProfileUpdates(parsed?.profileUpdates || {});
   const merged = finalizeStudentProfile(mergeStudentProfile(current, parsedUpdates));
-  const readiness = evaluateInterviewReadiness(merged);
+  const readiness = evaluateInterviewReadiness(merged, {
+    questionCount,
+    maxQuestions,
+  });
 
-  const nextQuestion = readiness.ready
-   ? ""
-    : typeof parsed?.nextQuestion === "string" && parsed.nextQuestion.trim().length >= 10
-      ? parsed.nextQuestion.trim()
-      : getFallbackQuestion(merged, readiness);
+  let nextQuestion = "";
+  if (!readiness.ready) {
+    if (
+      typeof parsed?.nextQuestion === "string" &&
+      parsed.nextQuestion.trim().length >= 5 &&
+      !/[?].*[?]/.test(parsed.nextQuestion.trim()) // crude way to reduce double-question prompts
+    ) {
+      nextQuestion = parsed.nextQuestion.trim();
+    } else {
+      nextQuestion = getFallbackQuestion(merged);
+    }
+  }
 
   return {
     updatedProfile: merged,
@@ -157,7 +163,7 @@ ${JSON.stringify(getConversationWindow(messages), null, 2)}
     reasoningSummary:
       typeof parsed?.reasoningSummary === "string"
         ? parsed.reasoningSummary
-        : `Interview stage: ${readiness.interviewStage}`,
+        : `Quick scan stage: ${readiness.interviewStage}`,
     nextQuestion,
     interviewReady: readiness.ready,
     interviewAssessment: readiness,

@@ -22,6 +22,21 @@ function safeParseJson(text) {
     return null;
   }
 }
+
+function budgetBand(budgetMAD) {
+  if (budgetMAD == null) return "unknown";
+  if (budgetMAD <= 15000) return "low";
+  if (budgetMAD <= 40000) return "medium";
+  return "high";
+}
+
+function riskStyle(score) {
+  if (score == null) return "balanced";
+  if (score <= 2) return "safe";
+  if (score >= 4) return "ambitious";
+  return "balanced";
+}
+
 function fitLabel(score) {
   if (score >= 80) return "excellent_fit";
   if (score >= 65) return "good_fit";
@@ -29,162 +44,174 @@ function fitLabel(score) {
   return "risky_fit";
 }
 
-function computeFitScore(profile, source, label = "balanced") {
+function computeFitScore(profile, source, lane = "balanced") {
   let score = 45;
   const hay = `${source.title} ${source.snippet}`.toLowerCase();
 
   if (source.official) score += 10;
   if (profile.preferredRegion && hay.includes(String(profile.preferredRegion).toLowerCase())) score += 10;
   if (profile.fieldOfInterest && hay.includes(String(profile.fieldOfInterest).toLowerCase())) score += 12;
-  if ((profile.budgetMAD || 0) >= 30000) score += 5;
-  if ((profile.psychologicalReadiness || 0) >= 4) score += 5;
-  if ((profile.academicConfidence || 0) >= 4) score += 5;
-  if ((profile.mobility || 0) <= 2 && !hay.includes(String(profile.preferredRegion || "").toLowerCase())) score -= 10;
-  if (label === "safe" && (profile.riskTolerance || 0) <= 2) score += 6;
-  if (label === "ambitious" && (profile.riskTolerance || 0) >= 4) score += 6;
+  if (profile.preferredLanguage && hay.includes(String(profile.preferredLanguage).toLowerCase())) score += 2;
+  if (lane === "safe" && (profile.riskTolerance || 3) <= 2) score += 5;
+  if (lane === "ambitious" && (profile.riskTolerance || 3) >= 4) score += 5;
 
   return Math.max(20, Math.min(95, score));
 }
-function fallbackPlan(profile, sources = []) {
-  const labels = ["balanced", "safe", "ambitious"];
-  const shortlisted = sources.slice(0, 3).map((source, index) => {
-    const label = labels[index] || "balanced";
-    const score = computeFitScore(profile, source, label);
+
+function buildFallbackPlan(profile, sources = [], finalizeReason = null) {
+  const lanes = ["safe", "balanced", "ambitious"];
+  const schoolSuggestions = sources.slice(0, 6).map((source, index) => {
+    const lane = lanes[index % lanes.length];
+    const score = computeFitScore(profile, source, lane);
 
     return {
       rank: index + 1,
-      label,
       name: source.title,
-      program: profile.fieldOfInterest || "Programme à vérifier",
-      location: profile.preferredRegion || "Maroc",
-      sourceUrl: source.url,
+      program: source.program || profile.fieldOfInterest || "Program to verify",
+      city: source.city || profile.preferredRegion || "Morocco",
+      url: source.url,
+      sourceType: source.sourceType || "web_source",
       official: Boolean(source.official),
       fitScore: score,
       fitLabel: fitLabel(score),
-      affordability: profile.budgetMAD && profile.budgetMAD < 20000 ? "check_costs_carefully" : "acceptable_or_unknown",
-      psychologicalLoad:
-        (profile.psychologicalReadiness || 0) <= 2
-          ? "prefer_progressive_path"
-          : (profile.psychologicalReadiness || 0) >= 4
-            ? "can_handle_high_demand"
-            : "manageable",
-             fitReasons: [
-        `Aligné avec le domaine ${profile.fieldOfInterest || "souhaité"}`,
-        `Compatible avec la région ${profile.preferredRegion || "préférée"}`,
-      ],
-      admissionRequirements: [
-        "Vérifier les conditions d’admission sur le site officiel",
-        "Préparer relevés de notes et diplômes",
-        "Contrôler les délais de candidature",
-      ],
-      riskNotes: [
-        "Les informations doivent être confirmées sur le site officiel.",
+      recommendedLane: lane,
+      whyItFits: [
+        `Aligned with ${profile.fieldOfInterest || "the declared field"}`,
+        profile.preferredRegion
+          ? `Relevant to ${profile.preferredRegion}`
+          : `Location can be verified`,
       ],
     };
   });
-    return {
-    summary:
-      "Plan généré en mode fallback à partir des meilleures sources disponibles, avec trois niveaux de recommandation: ambitieux, équilibré et prudent.",
-    careerDirection: {
-      chosenField: profile.fieldOfInterest,
-      whyItFits:
-        profile.careerGoal ||
-        `Cette direction est cohérente avec tes intérêts déclarés et ta situation actuelle.`,
-    },
+
+  return {
+    summary: "Fast guidance result generated from the quick scan and trusted/web retrieval.",
+    completionMode: finalizeReason === "max_questions_reached" ? "partial" : "complete",
     studentSnapshot: {
       fieldOfInterest: profile.fieldOfInterest,
       academicLevel: profile.academicLevel,
       academicAverage: profile.academicAverage,
       academicConfidence: profile.academicConfidence,
-      psychologicalReadiness: profile.psychologicalReadiness,
-      familySupport: profile.familySupport,
-      mobility: profile.mobility,
-      riskTolerance: profile.riskTolerance,
       preferredRegion: profile.preferredRegion,
       preferredLanguage: profile.preferredLanguage,
-      budgetMAD: profile.budgetMAD,
       institutionType: profile.institutionType,
+      budgetMAD: profile.budgetMAD,
+      budgetBand: budgetBand(profile.budgetMAD),
+      riskStyle: riskStyle(profile.riskTolerance),
+      mobility: profile.mobility,
     },
-     recommendedPaths: shortlisted,
-    immediateActions: [
-      "Comparer 2 ou 3 établissements maximum",
-      "Vérifier les conditions sur les sites officiels",
-      "Préparer les documents administratifs",
-      "Construire un calendrier de candidatures",
+    missingFields: Array.isArray(profile.missing) ? profile.missing : [],
+    careerDirection: {
+      chosenField: profile.fieldOfInterest,
+      whyItFits: `This direction is the most coherent with the quick scan profile collected so far.`,
+    },
+    recommendedPaths: [
+      {
+        label: "safe",
+        title: "Safe path",
+        summary: "A lower-risk path with realistic access conditions and stable progression.",
+      },
+      {
+        label: "balanced",
+        title: "Balanced path",
+        summary: "A strong middle path between ambition, cost, and accessibility.",
+      },
+      {
+        label: "ambitious",
+        title: "Ambitious path",
+        summary: "A more selective path for stronger profiles or higher ambition.",
+      },
     ],
-    redFlags: [
-      "Ne pas se fier uniquement aux résultats non officiels.",
-      "Ne pas choisir uniquement par prestige si le budget, le niveau ou la charge psychologique ne suivent pas.",
-    ],
-    sources: sources.slice(0, 5),
+    schools: schoolSuggestions,
+    sources: sources.slice(0, 8).map((source) => ({
+      title: source.title,
+      url: source.url,
+      sourceType: source.sourceType || "web_source",
+      official: Boolean(source.official),
+      qualityScore: source.qualityScore || source.score || 0,
+    })),
     generatedAt: new Date().toISOString(),
     isFallback: true,
   };
 }
-export async function generateStructuredStudyPlan(profile, sources = []) {
+
+export async function generateStructuredStudyPlan(profile, sources = [], finalizeReason = null) {
   if (!Array.isArray(sources) || sources.length === 0) {
-    return fallbackPlan(profile, sources);
+    return buildFallbackPlan(profile, sources, finalizeReason);
   }
 
   const prompt = `
-You are a university and career guidance expert for Moroccan students.
+You are a fast Moroccan university guidance planner.
 Return ONLY valid JSON.
-Use ONLY the sources below.
-Do NOT invent schools, fees, deadlines, or requirements.
-You must produce realistic recommendations, not just prestigious ones.
-Consider psychological readiness, academic strength, family support, budget, mobility, and risk tolerance.
+Use ONLY the provided sources.
+Do NOT invent universities, links, deadlines, or requirements.
+The interview was a quick scan, so your job is to produce a useful result even if some fields are missing.
+You must provide:
+- a clear student snapshot
+- missing fields
+- 3 path styles: safe, balanced, ambitious
+- compatible schools with links and why they fit
 
 Student profile:
 ${JSON.stringify(profile, null, 2)}
 
+Finalize reason:
+${finalizeReason || "enough_information"}
+
 Sources:
 ${JSON.stringify(sources, null, 2)}
+
 Required JSON schema:
 {
   "summary": "string",
-  "careerDirection": {
-    "chosenField": "string",
-    "whyItFits": "string"
-  },
+  "completionMode": "partial",
   "studentSnapshot": {
     "fieldOfInterest": "string",
     "academicLevel": "string",
     "academicAverage": 0,
     "academicConfidence": 3,
-    "psychologicalReadiness": 3,
-    "familySupport": 3,
-    "mobility": 3,
-    "riskTolerance": 3,
     "preferredRegion": "string",
     "preferredLanguage": "string",
+    "institutionType": "string",
     "budgetMAD": 0,
-    "institutionType": "string"
+    "budgetBand": "medium",
+    "riskStyle": "balanced",
+    "mobility": 3
   },
-   "recommendedPaths": [
+  "missingFields": ["string"],
+  "careerDirection": {
+    "chosenField": "string",
+    "whyItFits": "string"
+  },
+  "recommendedPaths": [
     {
-      "rank": 1,
-      "label": "balanced",
-      "name": "string",
-      "program": "string",
-      "location": "string",
-      "sourceUrl": "string",
-      "official": true,
-      "fitScore": 75,
-      "fitLabel": "good_fit",
-      "affordability": "acceptable_or_unknown",
-      "psychologicalLoad": "manageable",
-      "fitReasons": ["string"],
-      "admissionRequirements": ["string"],
-      "riskNotes": ["string"]
+      "label": "safe",
+      "title": "string",
+      "summary": "string"
     }
   ],
-  "immediateActions": ["string"],
-  "redFlags": ["string"],
-  "sources": [
-    { "title": "string",
+  "schools": [
+    {
+      "rank": 1,
+      "name": "string",
+      "program": "string",
+      "city": "string",
       "url": "string",
+      "sourceType": "trusted_source",
       "official": true,
-      "qualityScore": 5
+      "fitScore": 80,
+      "fitLabel": "good_fit",
+      "recommendedLane": "balanced",
+      "whyItFits": ["string"]
+    }
+  ],
+  "sources": [
+    {
+      "title": "string",
+      "url": "string",
+      "sourceType": "trusted_source",
+      "official": true,
+      "qualityScore": 7
     }
   ]
 }
@@ -192,46 +219,40 @@ Required JSON schema:
 
   const raw = await generateChatCompletion(
     [{ role: "user", content: prompt }],
-    { temperature: 0.15, max_tokens: 2400 },
+    { temperature: 0.15, max_tokens: 2200 },
   );
 
   const parsed = safeParseJson(raw);
   if (!parsed) {
-    return fallbackPlan(profile, sources);
+    return buildFallbackPlan(profile, sources, finalizeReason);
   }
-   const recommendedPaths = Array.isArray(parsed.recommendedPaths)
-    ? parsed.recommendedPaths.map((item, index) => ({
-        ...item,
-        rank: index + 1,
-        fitScore: Number(item.fitScore || 60),
-        fitLabel: item.fitLabel || fitLabel(Number(item.fitScore || 60)),
-      }))
-    : [];
 
   return {
-    summary: parsed.summary || "Plan d’études généré.",
-    careerDirection: parsed.careerDirection || {
-      chosenField: profile.fieldOfInterest,
-      whyItFits: `Cette direction semble cohérente avec le profil actuel.`,
-    },
+    summary: parsed.summary || "Guidance result generated.",
+    completionMode:
+      parsed.completionMode ||
+      (finalizeReason === "max_questions_reached" ? "partial" : "complete"),
     studentSnapshot: parsed.studentSnapshot || {
       fieldOfInterest: profile.fieldOfInterest,
       academicLevel: profile.academicLevel,
       academicAverage: profile.academicAverage,
       academicConfidence: profile.academicConfidence,
-      psychologicalReadiness: profile.psychologicalReadiness,
-      familySupport: profile.familySupport,
-      mobility: profile.mobility,
-      riskTolerance: profile.riskTolerance,
       preferredRegion: profile.preferredRegion,
-       preferredLanguage: profile.preferredLanguage,
-      budgetMAD: profile.budgetMAD,
+      preferredLanguage: profile.preferredLanguage,
       institutionType: profile.institutionType,
+      budgetMAD: profile.budgetMAD,
+      budgetBand: budgetBand(profile.budgetMAD),
+      riskStyle: riskStyle(profile.riskTolerance),
+      mobility: profile.mobility,
     },
-    recommendedPaths,
-    immediateActions: Array.isArray(parsed.immediateActions) ? parsed.immediateActions : [],
-    redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
-    sources: Array.isArray(parsed.sources) ? parsed.sources : sources.slice(0, 5),
+    missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : profile.missing || [],
+    careerDirection: parsed.careerDirection || {
+      chosenField: profile.fieldOfInterest,
+      whyItFits: "This direction seems the most coherent with the quick scan profile.",
+    },
+    recommendedPaths: Array.isArray(parsed.recommendedPaths) ? parsed.recommendedPaths : [],
+    schools: Array.isArray(parsed.schools) ? parsed.schools : [],
+    sources: Array.isArray(parsed.sources) ? parsed.sources : [],
     generatedAt: new Date().toISOString(),
     isFallback: false,
   };
