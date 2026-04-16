@@ -1,5 +1,8 @@
 // graph.mjs
-// LangGraph orchestration with external nodes for profile, RAG, plan, and HITL
+// LangGraph orchestration with support for:
+// - "recommend" mode (existing career recommendations)
+// - "analyze" mode (existing profile diagnosis)
+// - "chat" mode (conversational Moroccan university advisor with Groq + Tavily)
 
 import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
 import { readFile } from "node:fs/promises";
@@ -12,11 +15,15 @@ import { ragNode } from "./nodes/ragNode.js";
 import { planNode } from "./nodes/planNode.js";
 import { humanCheckpointNode } from "./nodes/humanCheckpointNode.js";
 
+// NEW: Import chat and search nodes for Moroccan university advisor
+import { chatNode } from "./nodes/chatNode.js";
+import { searchNode } from "./nodes/searchNode.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ------------------------------------------------------------
-// STATE DEFINITION (with RAG and HITL fields)
+// STATE DEFINITION (extended with conversation fields)
 // ------------------------------------------------------------
 const State = Annotation.Root({
   mode: Annotation({
@@ -66,6 +73,27 @@ const State = Annotation.Root({
   userApproval: Annotation({
     reducer: (_left, right) => right,
     default: () => null,
+  }),
+  // NEW: Conversation fields for chat mode
+  messages: Annotation({
+    reducer: (left, right) => left.concat(right || []),
+    default: () => [],
+  }),
+  collectedInfo: Annotation({
+    reducer: (_left, right) => right,
+    default: () => ({}),
+  }),
+  nextQuestion: Annotation({
+    reducer: (_left, right) => right,
+    default: () => "",
+  }),
+  profileComplete: Annotation({
+    reducer: (_left, right) => right,
+    default: () => false,
+  }),
+  searchResults: Annotation({
+    reducer: (_left, right) => right,
+    default: () => [],
   }),
 });
 
@@ -133,7 +161,7 @@ function formatCareer(career) {
 }
 
 // ------------------------------------------------------------
-// NODES THAT REMAIN INLINE (they depend on helpers above)
+// NODES THAT REMAIN INLINE (for recommend/analyze modes)
 // ------------------------------------------------------------
 function diagnoseProfileNode(state) {
   const profile = state.profile;
@@ -282,7 +310,13 @@ function selectRecommendationsNode(state) {
 function routeFromMode(state) {
   if (state.mode === "analyze") return "diagnoseProfile";
   if (state.mode === "plan") return "retrieveRAG";
+  if (state.mode === "chat") return "chatNode";   // NEW: chat mode
   return "scoreCareers";
+}
+
+function routeAfterChat(state) {
+  // After chat, if profile is complete, go to search, else continue chat
+  return state.profileComplete ? "searchNode" : "chatNode";
 }
 
 function afterHumanCheckpoint(state) {
@@ -299,6 +333,7 @@ function afterHumanCheckpoint(state) {
 // BUILD GRAPH USING EXTERNAL NODES
 // ------------------------------------------------------------
 const graph = new StateGraph(State)
+  // Existing nodes
   .addNode("buildProfile", profileNode)
   .addNode("diagnoseProfile", diagnoseProfileNode)
   .addNode("scoreCareers", scoreCareersNode)
@@ -306,21 +341,31 @@ const graph = new StateGraph(State)
   .addNode("retrieveRAG", ragNode)
   .addNode("buildPlan", planNode)
   .addNode("humanCheckpoint", humanCheckpointNode)
+  
+  // NEW nodes for chat mode
+  .addNode("chatNode", chatNode)
+  .addNode("searchNode", searchNode)
 
+  // Entry point (always buildProfile first? For chat mode we might skip buildProfile)
+  // But we keep START -> buildProfile for backward compatibility.
+  // For chat mode, we override routing at buildProfile based on mode.
   .addEdge(START, "buildProfile")
   .addConditionalEdges("buildProfile", routeFromMode, [
     "diagnoseProfile",
     "retrieveRAG",
     "scoreCareers",
+    "chatNode",           // NEW: route to chatNode when mode === "chat"
   ])
 
+  // Chat mode flow
+  .addConditionalEdges("chatNode", routeAfterChat, ["chatNode", "searchNode"])
+  .addEdge("searchNode", "buildPlan")          // After search, generate plan
+  .addEdge("buildPlan", "humanCheckpoint")     // Then HITL approval
+  .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
+
+  // Existing flows
   .addEdge("retrieveRAG", "buildPlan")
-  .addEdge("buildPlan", "humanCheckpoint")
-  .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, [
-    "humanCheckpoint",
-    END,
-  ])
-
+  .addEdge("buildPlan", "humanCheckpoint")     // Already defined above, but safe
   .addEdge("diagnoseProfile", END)
   .addEdge("scoreCareers", "selectRecommendations")
   .addEdge("selectRecommendations", END)
@@ -361,6 +406,32 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
     };
   }
 
+  if (mode === "chat") {
+    // If waiting for approval after plan generation
+    if (result.humanApprovalNeeded) {
+      return {
+        status: "awaiting_approval",
+        pendingAction: result.pendingAction,
+        agentTrace: result.trace,
+      };
+    }
+    // If profile collection in progress
+    if (!result.profileComplete) {
+      return {
+        status: "collecting",
+        response: result.nextQuestion,
+        agentTrace: result.trace,
+      };
+    }
+    // Final plan ready
+    return {
+      status: "plan_ready",
+      plan: result.plan,
+      agentTrace: result.trace,
+    };
+  }
+
+  // Default: recommend mode
   return {
     profile: result.profile,
     ...result.recommendations,
