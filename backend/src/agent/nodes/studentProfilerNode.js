@@ -1,7 +1,7 @@
 import { buildStudentProfile, getProfileSummary } from "../../services/student-profiler.service.js";
 
 export async function studentProfilerNode(state) {
-  const profile = buildStudentProfile(state.messages || [], state.studentProfile || {});
+  const profile = await buildStudentProfile(state.messages || [], state.studentProfile || {});
 
   return {
     studentProfile: profile,

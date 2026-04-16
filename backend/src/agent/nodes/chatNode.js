@@ -1,4 +1,5 @@
 // backend/src/agent/nodes/chatNode.js
+import { getLLMResponse } from '../services/llm.service.js';
 
 const PHASES = { GENERAL: 'general', SPECIFIC: 'specific', FIELD: 'field', PATH: 'path' };
 
@@ -34,38 +35,67 @@ function extractInfo(messages) {
   return { fieldOfInterest: field, academicLevel: level, preferredRegion: region };
 }
 
-export async function chatNode(state) {
-  // Read the current user message from payload (set by chat.routes.js → runAgentGraph).
-  // state.payload.message is the ONLY new input for this turn; everything else
-  // (messages, collectedInfo, currentPhase) is restored from the MemorySaver checkpoint.
-  const userMessage      = state.payload?.message;
+async function generateDynamicQuestion(conversationHistory, collectedInfo, missingField) {
+  const missingFieldLabels = {
+    fieldOfInterest: 'their field of interest (e.g. Medicine, Engineering, Business, Law, Arts)',
+    academicLevel:   'their current academic level (e.g. Baccalaureate, Bachelor, Master)',
+    preferredRegion: 'their preferred city in Morocco to study in (e.g. Casablanca, Rabat, Marrakech)',
+  };
 
-  // MemorySaver has already restored the full conversation history into state.messages,
-  // so previousMessages is the accumulated transcript up to (but not including) this turn.
+  const alreadyKnown = Object.entries(collectedInfo)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `- ${k}: ${v}`)
+    .join('\n') || 'Nothing collected yet.';
+
+  const systemPrompt = `You are a warm, intelligent academic advisor helping Moroccan students find the right educational path.
+Your job is to have a natural, engaging conversation to learn about the student.
+
+You already know:
+${alreadyKnown}
+
+You still need to find out: ${missingFieldLabels[missingField]}
+
+Rules:
+- Ask ONLY about the missing field above — do NOT ask about anything else.
+- Make the question feel natural and personal, referencing what the student has already shared.
+- Keep it SHORT (1-2 sentences max).
+- NEVER use generic phrasing like "What field are you interested in?" — make it specific to this student.
+- Respond with ONLY the question, no preamble.`;
+
+  const messages = [
+    ...conversationHistory,
+    {
+      role: 'user',
+      content: `Based on our conversation so far, please ask me about ${missingFieldLabels[missingField]}.`,
+    },
+  ];
+
+  try {
+    const response = await getLLMResponse({ systemPrompt, messages });
+    return response?.trim() || null;
+  } catch (err) {
+    console.error('[chatNode] LLM question generation failed:', err);
+    // Fallback – still dynamic based on missing field
+    const fallbackMap = {
+      fieldOfInterest: `What field are you interested in? (Medicine, Engineering, Business, Law, Arts)`,
+      academicLevel: `What is your current academic level? (Baccalaureate, Bachelor, Master)`,
+      preferredRegion: `Which city in Morocco would you prefer to study in? (e.g., Casablanca, Rabat, Marrakech)`,
+    };
+    return fallbackMap[missingField] || `Could you tell me more about ${missingField}?`;
+  }
+}
+
+export async function chatNode(state) {
+  const userMessage      = state.payload?.message;
   const previousMessages = state.messages      || [];
   const collectedInfo    = state.collectedInfo  || {};
   const currentPhase     = state.currentPhase   || PHASES.GENERAL;
 
-  // --- Guard: no user message received ---
-  // This happens on the very first call (welcome) OR if the frontend sends an empty body.
-  // FIX: Instead of one hard-coded welcome, pick the appropriate prompt based on phase
-  // so that a missing message on a later turn doesn't reset the conversation to the start.
   if (!userMessage) {
-    let welcome;
-    if (previousMessages.length === 0) {
-      welcome = "Tell me about yourself: what are you studying, what are you curious about, and what kind of future are you trying to understand?";
-    } else if (currentPhase === PHASES.GENERAL) {
-      welcome = 'What field are you interested in? (Medicine, Engineering, Business, Law, Arts)';
-    } else if (currentPhase === PHASES.SPECIFIC) {
-      welcome = 'What is your current academic level? (Baccalaureate, Bachelor, Master)';
-    } else if (currentPhase === PHASES.FIELD) {
-      welcome = 'Which city in Morocco would you prefer to study in? (e.g., Casablanca, Rabat, Marrakech)';
-    } else {
-      welcome = 'Please continue — I\'m here to help.';
-    }
+    const welcome = previousMessages.length === 0
+      ? "Tell me about yourself: what are you studying, what are you curious about, and what kind of future are you trying to build?"
+      : "I'm still here — feel free to continue!";
 
-    // Return ONLY the delta (the new assistant message).
-    // The concat reducer in State accumulates it into the full history automatically.
     return {
       messages:        [{ role: 'assistant', content: welcome }],
       currentPhase,
@@ -75,19 +105,13 @@ export async function chatNode(state) {
     };
   }
 
-  // Build the full message list for extraction (previous turns + this user turn).
-  // We need the whole history so extractInfo can see everything the user has said.
   const allMessages = [
     ...previousMessages,
     { role: 'user', content: userMessage },
   ];
 
-  // Extract info from the complete conversation history.
   const extracted = extractInfo(allMessages);
 
-  // FIX: Merge into collectedInfo using the ALREADY-PERSISTED values as base.
-  // Only overwrite a field if extraction found something NEW; otherwise keep the
-  // previously checkpointed value so progress is never lost between turns.
   const newCollected = {
     ...collectedInfo,
     ...(extracted.fieldOfInterest ? { fieldOfInterest: extracted.fieldOfInterest } : {}),
@@ -95,47 +119,44 @@ export async function chatNode(state) {
     ...(extracted.preferredRegion ? { preferredRegion: extracted.preferredRegion } : {}),
   };
 
-  let nextPhase    = currentPhase;
-  let nextQuestion = '';
-  let isComplete   = false;
+  let nextPhase = currentPhase;
+  let missingField = null;
+  let isComplete = false;
 
-  // Phase transition logic
-  if (currentPhase === PHASES.GENERAL && newCollected.fieldOfInterest) {
+  if (!newCollected.fieldOfInterest) {
+    nextPhase    = PHASES.GENERAL;
+    missingField = 'fieldOfInterest';
+  } else if (!newCollected.academicLevel) {
     nextPhase    = PHASES.SPECIFIC;
-    nextQuestion = `Great! You're interested in ${newCollected.fieldOfInterest}. What is your current academic level? (Baccalaureate, Bachelor, Master)`;
-  } else if (currentPhase === PHASES.SPECIFIC && newCollected.academicLevel) {
+    missingField = 'academicLevel';
+  } else if (!newCollected.preferredRegion) {
     nextPhase    = PHASES.FIELD;
-    nextQuestion = `Thanks. Which city in Morocco would you prefer to study in? (e.g., Casablanca, Rabat, Marrakech)`;
-  } else if (currentPhase === PHASES.FIELD && newCollected.preferredRegion) {
+    missingField = 'preferredRegion';
+  } else {
     nextPhase  = PHASES.PATH;
     isComplete = true;
-  } else if (currentPhase === PHASES.GENERAL && !newCollected.fieldOfInterest) {
-    nextQuestion = 'What field are you interested in? (Medicine, Engineering, Business, Law, Arts)';
-  } else if (currentPhase === PHASES.SPECIFIC && !newCollected.academicLevel) {
-    nextQuestion = 'What is your current academic level? (Baccalaureate, Bachelor, Master)';
-  } else if (currentPhase === PHASES.FIELD && !newCollected.preferredRegion) {
-    nextQuestion = 'Which city in Morocco do you prefer?';
-  } else {
-    // Fallback: ask for the first missing piece
-    if      (!newCollected.fieldOfInterest) nextQuestion = 'What field interests you?';
-    else if (!newCollected.academicLevel)   nextQuestion = 'What is your academic level?';
-    else if (!newCollected.preferredRegion) nextQuestion = 'Which city in Morocco?';
-    else isComplete = true;
   }
 
-  // FIX: Return ONLY the delta — the new user message and the new assistant reply.
-  // DO NOT spread previousMessages here; the concat reducer handles accumulation.
-  // Returning the full array would double every prior message on the next turn.
   const deltaMessages = [{ role: 'user', content: userMessage }];
-  if (!isComplete && nextQuestion) {
+
+  if (!isComplete) {
+    const nextQuestion = await generateDynamicQuestion(allMessages, newCollected, missingField);
     deltaMessages.push({ role: 'assistant', content: nextQuestion });
+
+    return {
+      messages:        deltaMessages,
+      collectedInfo:   newCollected,
+      currentPhase:    nextPhase,
+      profileComplete: false,
+      nextQuestion,
+    };
   }
 
   return {
-    messages:        deltaMessages,  // ← delta only, NOT the full array
+    messages:        deltaMessages,
     collectedInfo:   newCollected,
     currentPhase:    nextPhase,
-    profileComplete: isComplete,
-    nextQuestion:    isComplete ? '' : nextQuestion,
+    profileComplete: true,
+    nextQuestion:    '',
   };
 }
