@@ -2,9 +2,11 @@ import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { profileNode } from "./nodes/profileNode.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 // ------------------------------------------------------------
 // EXTENDED STATE with RAG and HITL fields
 // ------------------------------------------------------------
@@ -99,44 +101,6 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
-function inferThemes(profile) {
-  const allSignals = [
-    ...profile.passions,
-    ...profile.interests,
-    ...profile.causes,
-    ...profile.strengths,
-    ...profile.values,
-    ...profile.subjectsEnjoyed,
-    ...profile.subjectsAvoided.map((item) => `avoid:${item}`),
-    profile.personalGoal.toLowerCase(),
-  ].join(" ");
-
-  const buckets = {
-    technology: ["ai", "software", "coding", "code", "data", "cyber", "web", "app", "apps", "tech", "logic"],
-    business: ["business", "marketing", "management", "product", "startup", "entrepreneurship", "sales", "strategy"],
-    creativity: ["design", "creative", "ui", "ux", "video", "content", "art", "branding"],
-    impact: ["education", "health", "social", "community", "accessibility", "environment", "impact"],
-    analysis: ["math", "analysis", "research", "problem solving", "statistics", "modeling"],
-  };
-
-  const scores = Object.entries(buckets).map(([theme, keywords]) => {
-    const score = keywords.reduce((acc, keyword) => acc + (allSignals.includes(keyword) ? 1 : 0), 0);
-    return { theme, score };
-  });
-
-  return scores.filter((item) => item.score > 0).sort((a, b) => b.score - a.score).map((item) => item.theme);
-}
-
-function profileReadiness(profile) {
-  const base = skillRank[profile.skillLevel] || 1;
-  const clarityBoost = {
-    i_dont_know: 0,
-    some_ideas: 0,
-    i_know: 1,
-  }[profile.careerClarity] || 0;
-  return Math.min(base + clarityBoost, 3);
-}
-
 function textIncludesAny(text, keywords) {
   const lowered = String(text || "").toLowerCase();
   return keywords.some((keyword) => lowered.includes(String(keyword).toLowerCase()));
@@ -147,48 +111,9 @@ function overlap(listA, listB) {
   return normalizeArray(listA).filter((item) => setB.has(item));
 }
 
-function buildProfileNode(state) {
-  const input = state.payload || {};
-  const profile = {
-    passions: normalizeArray(input.passions),
-    interests: normalizeArray(input.interests),
-    causes: normalizeArray(input.causes),
-    strengths: normalizeArray(input.strengths),
-    academicLevel: normalizeText(input.academicLevel || input.level || "high_school").toLowerCase(),
-    fieldOfStudy: normalizeText(input.fieldOfStudy || input.field || "general").toLowerCase(),
-    skillLevel: normalizeText(input.skillLevel || "beginner").toLowerCase(),
-    careerClarity: normalizeText(input.careerClarity || "i_dont_know").toLowerCase().replace(/\s+/g, "_"),
-    personalGoal: normalizeText(input.personalGoal),
-    mainChallenge: normalizeText(input.mainChallenge || "").toLowerCase().replace(/\s+/g, "_"),
-    opportunityTypes: normalizeArray(input.opportunityTypes),
-    preferredLocation: normalizeText(input.preferredLocation || "remote").toLowerCase(),
-    values: normalizeArray(input.values || input.workValues),
-    workStyle: normalizeText(input.workStyle || "hybrid").toLowerCase(),
-    subjectsEnjoyed: normalizeArray(input.subjectsEnjoyed),
-    subjectsAvoided: normalizeArray(input.subjectsAvoided),
-    languages: normalizeArray(input.languages),
-  };
-
-  const themes = inferThemes(profile);
-  const readiness = profileReadiness(profile);
-
-  return {
-    profile: {
-      ...profile,
-      themes,
-      readiness,
-    },
-    trace: [
-      `ProfileAgent: normalized ${profile.interests.length + profile.passions.length + profile.strengths.length} preference signals`,
-      `ProfileAgent: inferred themes -> ${themes.join(", ") || "general exploration"}`,
-      `ProfileAgent: readiness level -> ${readiness}/3`,
-    ],
-  };
-}
-
 function routeFromMode(state) {
   if (state.mode === "analyze") return "diagnoseProfile";
-  if (state.mode === "plan") return "retrieveRAG";   // CHANGED: go to RAG first
+  if (state.mode === "plan") return "retrieveRAG";
   return "scoreCareers";
 }
 
@@ -208,7 +133,7 @@ function diagnoseProfileNode(state) {
   const diagnosis = {
     recommendationMode,
     mainNeed: challengeLabels[profile.mainChallenge] || "direction clarification",
-    summary: `You seem driven by ${profile.themes.slice(0, 2).join(" and ") || "general exploration"}. The agent should use a ${recommendationMode} strategy.`,
+    summary: `You seem driven by ${profile.themes?.slice(0, 2).join(" and ") || "general exploration"}. The agent should use a ${recommendationMode} strategy.`,
     suggestedNextStep:
       recommendationMode === "explore"
         ? "Compare 3 different tracks and validate with small projects."
@@ -353,7 +278,7 @@ async function retrieveRAGNode(state) {
   const profile = state.profile;
   const query = `Career guidance for someone with interests in ${profile.interests.join(", ")} and strengths in ${profile.strengths.join(", ")}. Personal goal: ${profile.personalGoal}`;
   
-  const ragContext = await ragService.query(query, topK = 3);
+  const ragContext = await ragService.query(query, 3);
   
   return {
     ragContext,
@@ -365,7 +290,6 @@ async function retrieveRAGNode(state) {
 // NEW: Human-in-the-Loop Checkpoint Node
 // ------------------------------------------------------------
 async function humanCheckpointNode(state) {
-  // If user already approved, skip pause
   if (state.userApproval === "approved") {
     return { humanApprovalNeeded: false, pendingAction: null, userApproval: null };
   }
@@ -373,7 +297,6 @@ async function humanCheckpointNode(state) {
     return { humanApprovalNeeded: false, pendingAction: null, userApproval: null, plan: null };
   }
 
-  // First time: pause and wait for approval
   const pendingPlan = state.plan;
   if (pendingPlan && !state.humanApprovalNeeded) {
     return {
@@ -418,7 +341,6 @@ async function buildPlanNode(state) {
     })
     .slice(0, 5);
 
-  // If RAG context exists, enhance the plan explanation
   let ragEnhancedExplanation = "";
   if (ragContext.length > 0) {
     ragEnhancedExplanation = `\n\nAdditional context from knowledge base: ${ragContext.map(c => c.content).join(" ").substring(0, 500)}`;
@@ -454,7 +376,6 @@ async function buildPlanNode(state) {
 // ------------------------------------------------------------
 function afterHumanCheckpoint(state) {
   if (state.humanApprovalNeeded) {
-    // This will cause the graph to pause (we'll handle via checkpointer)
     return "humanCheckpoint";
   }
   if (state.userApproval === "rejected") {
@@ -464,21 +385,20 @@ function afterHumanCheckpoint(state) {
 }
 
 // ------------------------------------------------------------
-// BUILD THE GRAPH (with new nodes)
+// BUILD THE GRAPH (with imported profileNode)
 // ------------------------------------------------------------
 const graph = new StateGraph(State)
-  .addNode("buildProfile", buildProfileNode)
+  .addNode("buildProfile", profileNode)          // NOW USING EXTERNAL NODE
   .addNode("diagnoseProfile", diagnoseProfileNode)
   .addNode("scoreCareers", scoreCareersNode)
   .addNode("selectRecommendations", selectRecommendationsNode)
-  .addNode("retrieveRAG", retrieveRAGNode)           // NEW
-  .addNode("buildPlan", buildPlanNode)               // MODIFIED
-  .addNode("humanCheckpoint", humanCheckpointNode)   // NEW
+  .addNode("retrieveRAG", retrieveRAGNode)
+  .addNode("buildPlan", buildPlanNode)
+  .addNode("humanCheckpoint", humanCheckpointNode)
 
   .addEdge(START, "buildProfile")
   .addConditionalEdges("buildProfile", routeFromMode, ["diagnoseProfile", "retrieveRAG", "scoreCareers"])
   
-  // For "plan" mode: after RAG, buildPlan, then humanCheckpoint
   .addEdge("retrieveRAG", "buildPlan")
   .addEdge("buildPlan", "humanCheckpoint")
   .addConditionalEdges("humanCheckpoint", afterHumanCheckpoint, ["humanCheckpoint", END])
@@ -489,7 +409,7 @@ const graph = new StateGraph(State)
   .compile();
 
 // ------------------------------------------------------------
-// EXPORT (same as before, but with optional HITL resume)
+// EXPORT
 // ------------------------------------------------------------
 export async function runAgentGraph(mode = "recommend", payload = {}, userApproval = null, config = {}) {
   const input = {
@@ -498,7 +418,6 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
     userApproval: userApproval || null,
   };
 
-  // If resuming after HITL, we need to pass the thread_id via config
   const result = await graph.invoke(input, config);
 
   if (mode === "analyze") {
@@ -510,7 +429,6 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
   }
 
   if (mode === "plan") {
-    // If waiting for human approval, return the pending action
     if (result.humanApprovalNeeded) {
       return {
         status: "awaiting_approval",
