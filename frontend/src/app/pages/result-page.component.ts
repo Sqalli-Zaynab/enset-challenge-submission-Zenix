@@ -3,7 +3,7 @@ import { NgClass, NgFor, NgIf } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import { ProfileFlowService } from '../profile-flow.service';
-import { CareerChoice, OpportunityItem } from '../profile-flow.types';
+import { CareerChoice, OpportunityItem, StudyOption } from '../profile-flow.types';
 import {
   CARD_TONES_BY_LABEL,
   EMPTY_RADAR_SCORES,
@@ -188,6 +188,10 @@ export class ResultPageComponent implements OnInit {
 
   trackByOpportunity(_: number, opportunity: OpportunityItem): number {
     return opportunity.id;
+  }
+
+  trackByStudyOption(_: number, option: StudyOption): string {
+    return `${option.school}-${option.program}`;
   }
 
   exportPlan(): void {

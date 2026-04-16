@@ -673,7 +673,7 @@ export class ResultPdfExportService {
       x + 8,
       y + 10,
       REPORT_THEME.mint,
-      'Matched opportunities',
+      'Study path & opportunities',
       [14, 100, 80],
     );
 
@@ -681,7 +681,7 @@ export class ResultPdfExportService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.8);
     doc.text(
-      'Aligned with your selected path, skill level, and location preference.',
+      'Programs and opportunities aligned with your selected path.',
       x + 48,
       y + 10.3,
     );
@@ -691,8 +691,38 @@ export class ResultPdfExportService {
     doc.line(x + 8, y + 16, x + w - 8, y + 16);
 
     let rowY = y + 24;
+
+    payload.plan.studyOptions?.slice(0, 3).forEach((option) => {
+      this.drawPill(
+        doc,
+        x + 8,
+        rowY - 3,
+        toTitleCase(option.city || 'Morocco'),
+        REPORT_THEME.softPurple,
+        REPORT_THEME.softPurple,
+        5.2,
+        REPORT_THEME.purple,
+        0.2,
+      );
+
+      doc.setTextColor(...REPORT_THEME.text);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.2);
+      doc.text(option.school, x + 35, rowY + 1.5);
+
+      doc.setTextColor(...REPORT_THEME.muted);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.3);
+      doc.text(doc.splitTextToSize(option.program, w - 50), x + 35, rowY + 7);
+
+      doc.setDrawColor(...REPORT_THEME.border);
+      doc.setLineWidth(0.25);
+      doc.line(x + 8, rowY + 14, x + w - 8, rowY + 14);
+      rowY += 17;
+    });
+
     payload.plan.recommendedOpportunities
-      .slice(0, 5)
+      .slice(0, payload.plan.studyOptions?.length ? 3 : 5)
       .forEach((opportunity) => {
         const tone = this.getOpportunityTone(opportunity.type);
         this.drawPill(

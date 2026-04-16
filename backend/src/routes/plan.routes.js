@@ -5,6 +5,7 @@ import { planDecisionSchema } from "../validators/chat.schemas.js";
 
 const router = express.Router();
 
+router.post("/generate", planController.generatePlan);
 router.post("/decision", validateBody(planDecisionSchema), planController.submitPlanDecision);
 router.post("/confirm", validateBody(planDecisionSchema), planController.submitPlanDecision);
 

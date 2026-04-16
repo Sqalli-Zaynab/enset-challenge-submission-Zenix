@@ -4,11 +4,15 @@ import { dynamicQuestionNode } from "./nodes/dynamicQuestionNode.js";
 import { searchSchoolsNode } from "./nodes/searchSchoolsNode.js";
 import { verifySourcesNode } from "./nodes/verifySourcesNode.js";
 import { buildStudyPlanNode } from "./nodes/buildStudyPlanNode.js";
+
 const MAX_MESSAGES = 12;
 const MAX_TRACE = 30;
+const MAX_INTERVIEW_ANSWERS = 10;
+const OPENING_QUESTION =
+  "Tell me about yourself: what are you studying, what are you curious about, and what kind of future are you trying to build?";
 
 const State = Annotation.Root({
-  mode: Annotation({ reducer: (_l, r) => r, default: () => 'chat' }),
+  mode: Annotation({ reducer: (_l, r) => r, default: () => "chat" }),
   payload: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
   messages: Annotation({
     reducer: (l, r) => [...(l || []), ...(r || [])].slice(-MAX_MESSAGES),
@@ -16,13 +20,16 @@ const State = Annotation.Root({
   }),
   studentProfile: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
   studentSummary: Annotation({ reducer: (_l, r) => r, default: () => null }),
-  nextQuestion: Annotation({ reducer: (_l, r) => r, default: () => '' }),
+  nextQuestion: Annotation({ reducer: (_l, r) => r, default: () => "" }),
   readyForSearch: Annotation({ reducer: (_l, r) => r, default: () => false }),
   readyForPlan: Annotation({ reducer: (_l, r) => r, default: () => false }),
+  questionCount: Annotation({ reducer: (_l, r) => r, default: () => 0 }),
+  maxQuestions: Annotation({ reducer: (_l, r) => r, default: () => MAX_INTERVIEW_ANSWERS }),
+  finalizeReason: Annotation({ reducer: (_l, r) => r, default: () => null }),
   interviewAssessment: Annotation({ reducer: (_l, r) => r, default: () => null }),
   confidenceByDimension: Annotation({ reducer: (_l, r) => r, default: () => ({}) }),
   detectedSignals: Annotation({ reducer: (_l, r) => r, default: () => [] }),
-  reasoningSummary: Annotation({ reducer: (_l, r) => r, default: () => '' }),
+  reasoningSummary: Annotation({ reducer: (_l, r) => r, default: () => "" }),
   rawSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   verifiedSources: Annotation({ reducer: (_l, r) => r, default: () => [] }),
   searchQueries: Annotation({ reducer: (_l, r) => r, default: () => [] }),
@@ -32,32 +39,36 @@ const State = Annotation.Root({
     default: () => [],
   }),
 });
+
 function inputNode(state) {
   const message = state.payload?.message?.trim() || "";
 
   if (!message) {
     return {
-      messages: [
-        {
-          role: "assistant",
-          content:
-            "Salut 👋 Je vais te poser quelques questions rapides puis te proposer des parcours et des établissements compatibles.",
-        },
-      ],
+      messages: [{ role: "assistant", content: OPENING_QUESTION }],
+      nextQuestion: OPENING_QUESTION,
       trace: ["InputNode: welcome turn"],
-      maxQuestions: 10,
+      maxQuestions: MAX_INTERVIEW_ANSWERS,
     };
   }
 
   return {
     messages: [{ role: "user", content: message }],
     trace: ["InputNode: user message appended"],
-    maxQuestions: 10,
+    maxQuestions: MAX_INTERVIEW_ANSWERS,
+    questionCount: Number(state.questionCount || 0) + 1,
   };
 }
 
 function routeAfterQuestion(state) {
   return state.readyForPlan ? "searchSchools" : END;
+}
+
+function lastAssistantMessage(messages = []) {
+  return [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant" && String(message.content || "").trim())
+    ?.content || "";
 }
 
 const graph = new StateGraph(State)
@@ -88,7 +99,7 @@ export async function runZenixChatGraph(payload = {}, threadId = null) {
   if (!result.readyForPlan || !result.plan) {
     return {
       status: "collecting",
-      response: result.nextQuestion,
+      response: result.nextQuestion || lastAssistantMessage(result.messages),
       threadId,
       messages: result.messages,
       studentProfile: result.studentProfile,

@@ -21,6 +21,7 @@ import {
   ProfileAnalyzeResponse,
   ProfileDraft,
   ProfileFlowState,
+  StudyOption,
   WorkValue,
 } from './profile-flow.types';
 
@@ -337,6 +338,7 @@ export class ProfileFlowService {
           selectedPath: response.selectedPath,
           roadmap: response.roadmap,
           recommendedOpportunities: response.recommendedOpportunities,
+          studyOptions: response.studyOptions ?? [],
           explanation: response.explanation,
         },
       }));
@@ -502,7 +504,9 @@ export class ProfileFlowService {
  }
 
     if (Array.isArray((response as any).messages)) {
-      this.chatMessages.set((response as any).messages);
+      this.chatMessages.set(
+        this.mergeChatMessages(this.chatMessages(), (response as any).messages),
+      );
     }
 
     const profile =
@@ -533,6 +537,49 @@ export class ProfileFlowService {
     this.isChatLoading.set(false);
   }
 }
+
+  private mergeChatMessages(current: ChatMessage[], incoming: unknown): ChatMessage[] {
+    if (!Array.isArray(incoming)) {
+      return current;
+    }
+
+    const next = incoming
+      .map((message) => ({
+        role: message?.role,
+        content: typeof message?.content === 'string' ? message.content.trim() : '',
+      }))
+      .filter(
+        (message): message is ChatMessage =>
+          (message.role === 'user' || message.role === 'assistant') &&
+          message.content.length > 0,
+      );
+
+    if (!next.length) {
+      return current;
+    }
+
+    const currentIsPrefix =
+      next.length >= current.length &&
+      current.every(
+        (message, index) =>
+          next[index]?.role === message.role &&
+          next[index]?.content === message.content,
+      );
+
+    if (currentIsPrefix) {
+      return next;
+    }
+
+    return next.reduce<ChatMessage[]>((merged, message) => {
+      const previous = merged.at(-1);
+
+      if (previous?.role === message.role && previous.content === message.content) {
+        return merged;
+      }
+
+      return [...merged, message];
+    }, current);
+  }
 
   private toAcademicLevel(raw: string): ProfileDraft['academicLevel'] {
     if (!raw) return null;
@@ -731,8 +778,29 @@ export class ProfileFlowService {
                 item !== null,
             )
         : [],
+      studyOptions: Array.isArray(data.studyOptions)
+        ? data.studyOptions
+            .map((item: unknown) => this.sanitizeStudyOption(item))
+            .filter(
+              (item: StudyOption | null): item is StudyOption =>
+                item !== null,
+            )
+        : [],
       explanation:
         typeof data.explanation === 'string' ? data.explanation : '',
+    };
+  }
+
+  private sanitizeStudyOption(value: unknown): StudyOption | null {
+    if (!this.isRecord(value)) {
+      return null;
+    }
+
+    return {
+      program: typeof value['program'] === 'string' ? value['program'] : '',
+      school: typeof value['school'] === 'string' ? value['school'] : '',
+      city: typeof value['city'] === 'string' ? value['city'] : '',
+      link: typeof value['link'] === 'string' ? value['link'] : '',
     };
   }
 

@@ -51,6 +51,42 @@ function getConversationWindow(messages = [], limit = 8) {
   }));
 }
 
+function normalizeQuestion(text = "") {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenSet(text = "") {
+  return new Set(normalizeQuestion(text).split(" ").filter((token) => token.length > 2));
+}
+
+function similarity(left = "", right = "") {
+  const a = tokenSet(left);
+  const b = tokenSet(right);
+
+  if (!a.size || !b.size) return 0;
+
+  const intersection = [...a].filter((token) => b.has(token)).length;
+  const union = new Set([...a, ...b]).size;
+  return intersection / union;
+}
+
+function wasQuestionAlreadyAsked(question = "", messages = []) {
+  const normalized = normalizeQuestion(question);
+
+  if (!normalized) return false;
+
+  return messages
+    .filter((message) => message.role === "assistant")
+    .some((message) => {
+      const prior = normalizeQuestion(message.content);
+      return prior === normalized || similarity(prior, normalized) >= 0.82;
+    });
+}
+
 export async function runInterviewTurn({
   messages = [],
   currentProfile = {},
@@ -86,6 +122,9 @@ Rules:
 - Ask one atomic question only.
 - Keep it short and practical.
 - Use information already known.
+- The student can answer freely in natural language.
+- Do not require exact options, exact keywords, numbers, or yes/no answers.
+- If examples help, phrase them as optional hints, not required choices.
 - If enough information exists, ask nothing and finalize.
 - Return ONLY valid JSON.
 
@@ -125,15 +164,44 @@ ${JSON.stringify(currentReadiness, null, 2)}
 
 Recent conversation:
 ${JSON.stringify(getConversationWindow(messages), null, 2)}
+
+Already asked assistant questions:
+${JSON.stringify(
+  messages
+    .filter((message) => message.role === "assistant")
+    .map((message) => message.content)
+    .slice(-10),
+  null,
+  2,
+)}
 `;
 
-  const raw = await generateChatCompletion(
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    { temperature: 0.1, max_tokens: 900 },
-  );
+  let raw = "";
+
+  try {
+    raw = await generateChatCompletion(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { temperature: 0.1, max_tokens: 900 },
+    );
+  } catch (error) {
+    const fallbackReadiness = evaluateInterviewReadiness(current, {
+      questionCount,
+      maxQuestions,
+    });
+
+    return {
+      updatedProfile: current,
+      confidenceByDimension: {},
+      detectedSignals: [],
+      reasoningSummary: `Fallback interview question used: ${error?.message || "LLM unavailable"}`,
+      nextQuestion: fallbackReadiness.ready ? "" : getFallbackQuestion(current, fallbackReadiness, messages),
+      interviewReady: fallbackReadiness.ready,
+      interviewAssessment: fallbackReadiness,
+    };
+  }
 
   const parsed = safeParseJson(raw);
   const parsedUpdates = sanitizeProfileUpdates(parsed?.profileUpdates || {});
@@ -148,11 +216,12 @@ ${JSON.stringify(getConversationWindow(messages), null, 2)}
     if (
       typeof parsed?.nextQuestion === "string" &&
       parsed.nextQuestion.trim().length >= 5 &&
-      !/[?].*[?]/.test(parsed.nextQuestion.trim()) // crude way to reduce double-question prompts
+      !/[?].*[?]/.test(parsed.nextQuestion.trim()) && // crude way to reduce double-question prompts
+      !wasQuestionAlreadyAsked(parsed.nextQuestion.trim(), messages)
     ) {
       nextQuestion = parsed.nextQuestion.trim();
     } else {
-      nextQuestion = getFallbackQuestion(merged);
+      nextQuestion = getFallbackQuestion(merged, readiness, messages);
     }
   }
 

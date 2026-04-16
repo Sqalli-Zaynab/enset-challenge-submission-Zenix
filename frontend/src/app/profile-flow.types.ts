@@ -104,6 +104,13 @@ export interface OpportunityItem {
   description: string;
 }
 
+export interface StudyOption {
+  program: string;
+  school: string;
+  city: string;
+  link: string;
+}
+
 export interface PlanResult {
   selectedPath: {
     id: string;
@@ -116,6 +123,7 @@ export interface PlanResult {
     next90Days: string[];
   };
   recommendedOpportunities: OpportunityItem[];
+  studyOptions?: StudyOption[];
   explanation: string;
 }
 

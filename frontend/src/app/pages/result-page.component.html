@@ -186,6 +186,32 @@
               </div>
 
               <aside class="plan-panel__opportunities">
+                <div class="plan-panel__opportunities-head" *ngIf="actionPlan.studyOptions?.length">
+                  <p class="section-label">Study path</p>
+                  <p class="plan-panel__opportunities-copy">
+                    Schools and programs aligned with your selected direction.
+                  </p>
+                </div>
+
+                <div class="opportunity-list" *ngIf="actionPlan.studyOptions?.length">
+                  <article
+                    class="opportunity-card"
+                    *ngFor="
+                      let option of actionPlan.studyOptions;
+                      trackBy: trackByStudyOption
+                    "
+                  >
+                    <span class="opportunity-card__type">
+                      {{ option.city }}
+                    </span>
+                    <h4 class="opportunity-card__title">{{ option.school }}</h4>
+                    <p class="opportunity-card__meta">{{ option.program }}</p>
+                    <p class="opportunity-card__description">
+                      <a [href]="option.link" target="_blank" rel="noreferrer">Official program link</a>
+                    </p>
+                  </article>
+                </div>
+
                 <div class="plan-panel__opportunities-head">
                   <p class="section-label">Opportunities</p>
                   <p class="plan-panel__opportunities-copy">

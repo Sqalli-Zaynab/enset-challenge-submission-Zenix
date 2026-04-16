@@ -7,6 +7,7 @@
 // FIX: Import MemorySaver for native LangGraph multi-turn persistence.
 // This replaces the manual sessions Map in chat.routes.js entirely.
 import { StateGraph, Annotation, START, END, MemorySaver } from "@langchain/langgraph";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -376,7 +377,7 @@ export async function runAgentGraph(mode = "recommend", payload = {}, userApprov
   // FIX: Pass threadId correctly as { configurable: { thread_id } }.
   // Previously the raw string was passed as the config argument, which LangGraph
   // silently ignores, meaning the checkpointer never linked calls to a thread.
-  const config = threadId ? { configurable: { thread_id: threadId } } : {};
+  const config = { configurable: { thread_id: threadId || `${mode}-${randomUUID()}` } };
 
   const result = await graph.invoke(input, config);
 
