@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { profileNode } from "./nodes/profileNode.js";
-
+import { ragNode } from "./nodes/ragNode.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -392,7 +392,7 @@ const graph = new StateGraph(State)
   .addNode("diagnoseProfile", diagnoseProfileNode)
   .addNode("scoreCareers", scoreCareersNode)
   .addNode("selectRecommendations", selectRecommendationsNode)
-  .addNode("retrieveRAG", retrieveRAGNode)
+  .addNode("retrieveRAG", ragNode)
   .addNode("buildPlan", buildPlanNode)
   .addNode("humanCheckpoint", humanCheckpointNode)
 
