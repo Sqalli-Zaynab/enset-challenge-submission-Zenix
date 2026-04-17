@@ -6,16 +6,10 @@ import {
   CareerRecommendations,
   Diagnosis,
   NormalizedProfile,
+  OpportunityItem,
   PlanResult,
+  StudyOption,
 } from '../../profile-flow.types';
-import {
-  CARD_TONES_BY_LABEL,
-  buildStrengthMetrics,
-  getCareerSkills,
-  getConfidenceLabel,
-  getFieldLabel,
-  toTitleCase,
-} from '../../pages/result-page.helpers';
 
 interface ResultReportExportPayload {
   analyzedProfile: NormalizedProfile;
@@ -30,66 +24,52 @@ interface ResultReportExportPayload {
   readinessLabel: string;
 }
 
-interface PdfColorTheme {
-  purple: [number, number, number];
-  green: [number, number, number];
-  cream: [number, number, number];
-  white: [number, number, number];
-  text: [number, number, number];
+interface PdfTheme {
+  ink: [number, number, number];
   muted: [number, number, number];
-  border: [number, number, number];
-  dark: [number, number, number];
-  softPurple: [number, number, number];
-  mint: [number, number, number];
-  sand: [number, number, number];
-  blush: [number, number, number];
-  charcoal: [number, number, number];
+  accent: [number, number, number];
+  accentSoft: [number, number, number];
+  line: [number, number, number];
+  page: [number, number, number];
 }
 
-const REPORT_THEME: PdfColorTheme = {
-  purple: [69, 58, 166],
-  green: [31, 161, 118],
-  cream: [246, 240, 230],
-  white: [255, 255, 255],
-  text: [45, 42, 99],
-  muted: [103, 98, 121],
-  border: [227, 222, 241],
-  dark: [31, 27, 41],
-  softPurple: [236, 233, 255],
-  mint: [223, 243, 236],
-  sand: [249, 237, 214],
-  blush: [248, 235, 231],
-  charcoal: [68, 68, 65],
-};
+interface PdfContext {
+  doc: jsPDF;
+  pageWidth: number;
+  pageHeight: number;
+  marginX: number;
+  topY: number;
+  bottomY: number;
+  width: number;
+  cursorY: number;
+  dateLabel: string;
+}
 
-const TRAIT_TAG_COLORS = [
-  {
-    fill: REPORT_THEME.softPurple,
-    text: REPORT_THEME.purple,
-  },
-  {
-    fill: REPORT_THEME.mint,
-    text: [14, 100, 80] as [number, number, number],
-  },
-  {
-    fill: REPORT_THEME.sand,
-    text: [135, 83, 31] as [number, number, number],
-  },
-  {
-    fill: REPORT_THEME.blush,
-    text: [138, 75, 47] as [number, number, number],
-  },
-];
+interface PdfLogoAsset {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+const THEME: PdfTheme = {
+  ink: [31, 33, 41],
+  muted: [98, 101, 114],
+  accent: [58, 72, 168],
+  accentSoft: [236, 239, 255],
+  line: [227, 229, 236],
+  page: [250, 249, 246],
+};
 
 @Injectable({ providedIn: 'root' })
 export class ResultPdfExportService {
+  private logoAssetPromise: Promise<PdfLogoAsset | null> | null = null;
+
   async exportResultReport(payload: ResultReportExportPayload): Promise<void> {
     if (typeof window === 'undefined') {
       return;
     }
 
     const { jsPDF: JsPDF } = await import('jspdf');
-
     const doc = new JsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -98,770 +78,515 @@ export class ResultPdfExportService {
     });
 
     const generatedAt = new Date();
-    const dateLabel = this.formatDate(generatedAt);
+    const ctx: PdfContext = {
+      doc,
+      pageWidth: doc.internal.pageSize.getWidth(),
+      pageHeight: doc.internal.pageSize.getHeight(),
+      marginX: 18,
+      topY: 22,
+      bottomY: 18,
+      width: doc.internal.pageSize.getWidth() - 36,
+      cursorY: 22,
+      dateLabel: this.formatDate(generatedAt),
+    };
 
     doc.setProperties({
-      title: `${payload.selectedChoice.title} Career Report`,
-      subject: 'Afaq AI career guidance report',
+      title: `${payload.selectedChoice.title} Career Guidance Report`,
+      subject: 'Afaq career guidance report',
       author: 'Afaq',
       creator: 'Afaq',
-      keywords: 'career report, afaq, ai guidance, roadmap',
+      keywords: 'career guidance, afaq, roadmap, opportunities',
     });
 
-    this.drawFirstPage(doc, payload, dateLabel);
-    doc.addPage();
-    this.drawSecondPage(doc, payload, dateLabel);
-    this.drawFooters(doc, dateLabel);
+    const logoAsset = await this.loadPdfLogoAsset();
+
+    this.drawPageBackground(ctx);
+    this.drawHeader(ctx, payload, logoAsset);
+    this.drawProfileSnapshot(ctx, payload);
+    this.drawChosenCareer(ctx, payload);
+    this.drawAlternativePaths(ctx, payload);
+    this.drawPrograms(ctx, payload.plan.studyOptions ?? []);
+    this.drawRoadmap(ctx, payload);
+    this.drawOpportunities(ctx, payload.plan.recommendedOpportunities);
+    this.drawFooters(ctx.doc);
 
     const fileSlug = payload.selectedChoice.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-    doc.save(`afaq-${fileSlug || 'career-report'}.pdf`);
+    doc.save(`afaq-${fileSlug || 'career-guidance-report'}.pdf`);
   }
 
-  private drawFirstPage(
-    doc: jsPDF,
+  private drawPageBackground(ctx: PdfContext): void {
+    ctx.doc.setFillColor(...THEME.page);
+    ctx.doc.rect(0, 0, ctx.pageWidth, ctx.pageHeight, 'F');
+  }
+
+  private drawHeader(
+    ctx: PdfContext,
     payload: ResultReportExportPayload,
-    dateLabel: string,
+    logoAsset: PdfLogoAsset | null,
   ): void {
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoX = ctx.marginX;
+    const logoY = ctx.cursorY - 1;
+    const logoWidth = 42;
+    const logoHeight = 11.1;
 
-    this.drawPageBackground(doc);
-
-    doc.setFillColor(...REPORT_THEME.dark);
-    doc.rect(0, 0, pageWidth, 58, 'F');
-
-    this.drawBrandHeader(doc, dateLabel);
-    this.drawIdentitySummary(doc, payload);
-    this.drawPersonalGoal(doc, payload);
-    this.drawRoadmapAndSkills(doc, payload);
-  }
-
-  private drawSecondPage(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    _dateLabel: string,
-  ): void {
-    this.drawPageBackground(doc);
-
-    this.drawSectionHeading(
-      doc,
-      14,
-      18,
-      'Career recommendations',
-      'Your best-fit paths and the strengths they activate.',
-    );
-
-    this.drawRecommendationsPanel(doc, payload, 14, 34, 92, 106);
-    this.drawStrengthsPanel(doc, payload, 110, 34, 86, 106);
-    this.drawOpportunitiesPanel(doc, payload, 14, 148, 182, 116);
-  }
-
-  private drawPageBackground(doc: jsPDF): void {
-    doc.setFillColor(...REPORT_THEME.cream);
-    doc.rect(
-      0,
-      0,
-      doc.internal.pageSize.getWidth(),
-      doc.internal.pageSize.getHeight(),
-      'F',
-    );
-  }
-
-  private drawBrandHeader(doc: jsPDF, dateLabel: string): void {
-    this.drawAfaqLogo(doc, 14, 12, true);
-
-    doc.setTextColor(...REPORT_THEME.white);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.text('Career Path', 14, 30);
-
-    doc.setTextColor(...REPORT_THEME.softPurple);
-    doc.setFontSize(20);
-    doc.text('Analysis Report', 14, 39);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor(182, 176, 201);
-    doc.text(
-      'Generated by the Afaq AI agent for your next career move.',
-      14,
-      47,
-    );
-
-    doc.setTextColor(182, 176, 201);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.text('Generated on', 196, 14, { align: 'right' });
-
-    doc.setTextColor(...REPORT_THEME.white);
-    doc.setFontSize(10.5);
-    doc.text(dateLabel, 196, 21, { align: 'right' });
-
-    this.drawPill(
-      doc,
-      166,
-      28,
-      'Career report',
-      REPORT_THEME.purple,
-      [121, 112, 214],
-      7.5,
-      REPORT_THEME.white,
-    );
-  }
-
-  private drawIdentitySummary(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-  ): void {
-    const y = 66;
-    const x = 14;
-    const w = 182;
-    const h = 38;
-
-    this.drawCard(doc, x, y, w, h);
-
-    doc.setDrawColor(...REPORT_THEME.purple);
-    doc.setLineWidth(0.75);
-    doc.circle(x + 12, y + 19, 8.5, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...REPORT_THEME.purple);
-    doc.text('YP', x + 12, y + 20.3, { align: 'center' });
-
-    doc.setTextColor(...REPORT_THEME.text);
-    doc.setFontSize(13);
-    doc.text('Your profile', x + 22, y + 12);
-
-    doc.setTextColor(...REPORT_THEME.purple);
-    doc.setFontSize(9.5);
-    doc.text(payload.profileTitle.toUpperCase(), x + 22, y + 19);
-
-    let chipX = x + 22;
-    const chipY = y + 24.5;
-    payload.traitTags.slice(0, 4).forEach((tag, index) => {
-      chipX += this.drawPill(
-        doc,
-        chipX,
-        chipY,
-        tag,
-        TRAIT_TAG_COLORS[index % TRAIT_TAG_COLORS.length].fill,
-        TRAIT_TAG_COLORS[index % TRAIT_TAG_COLORS.length].fill,
-        6.2,
-        TRAIT_TAG_COLORS[index % TRAIT_TAG_COLORS.length].text,
-        0.5,
+    if (logoAsset) {
+      ctx.doc.addImage(
+        logoAsset.dataUrl,
+        'PNG',
+        logoX,
+        logoY,
+        logoWidth,
+        logoHeight,
+        undefined,
+        'FAST',
       );
-      chipX += 2;
+    } else {
+      this.drawFallbackLogo(ctx.doc, logoX, logoY);
+    }
+
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(21);
+    ctx.doc.text('Career Guidance Report', ctx.marginX, ctx.cursorY + 18);
+
+    ctx.doc.setFont('helvetica', 'normal');
+    ctx.doc.setFontSize(9.2);
+    ctx.doc.setTextColor(...THEME.muted);
+    ctx.doc.text(
+      'A concise orientation brief based on the guided interview and final path selection.',
+      ctx.marginX,
+      ctx.cursorY + 25,
+    );
+
+    ctx.doc.setFont('helvetica', 'normal');
+    ctx.doc.setFontSize(8.5);
+    ctx.doc.text(ctx.dateLabel, ctx.pageWidth - ctx.marginX, ctx.cursorY + 10, {
+      align: 'right',
     });
 
-    const statX = 118;
-    this.drawMetric(
-      doc,
-      statX,
-      y + 14,
-      `${payload.selectedChoice.score}%`,
-      'Top match',
-      REPORT_THEME.purple,
-    );
-    this.drawMetric(
-      doc,
-      statX + 24,
-      y + 14,
-      payload.skillLevelLabel,
-      'Skill level',
-      REPORT_THEME.text,
-    );
-    this.drawMetric(
-      doc,
-      statX + 48,
-      y + 14,
-      this.compactFieldLabel(
-        getFieldLabel(payload.analyzedProfile, payload.selectedChoice.title),
-      ),
-      'Field',
-      REPORT_THEME.text,
-    );
-    this.drawMetric(
-      doc,
-      statX + 72,
-      y + 14,
-      getConfidenceLabel(
-        payload.selectedChoice.score,
-        payload.analyzedProfile.readiness,
-        payload.diagnosis,
-      ),
-      'Confidence',
-      REPORT_THEME.green,
-    );
+    this.drawInlineLabel(ctx.doc, ctx.marginX, ctx.cursorY + 33, payload.selectedChoice.title);
+
+    ctx.doc.setDrawColor(...THEME.line);
+    ctx.doc.setLineWidth(0.35);
+    ctx.doc.line(ctx.marginX, ctx.cursorY + 39, ctx.pageWidth - ctx.marginX, ctx.cursorY + 39);
+    ctx.cursorY += 48;
   }
 
-  private drawPersonalGoal(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-  ): void {
-    const x = 14;
-    const y = 111;
-    const w = 182;
-    const h = 30;
-    const goalText = payload.analyzedProfile.personalGoal.trim()
-      ? `"${payload.analyzedProfile.personalGoal.trim()}"`
-      : payload.profileSummary;
+  private drawProfileSnapshot(ctx: PdfContext, payload: ResultReportExportPayload): void {
+    const profileSentence = this.buildProfileSnapshotText(payload);
+    const strongestSignals = this.takeList(payload.analyzedProfile.strengths, 3);
 
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(doc, x + 8, y + 10, REPORT_THEME.purple, 'Your personal goal');
-
-    doc.setDrawColor(...REPORT_THEME.border);
-    doc.setLineWidth(0.3);
-    doc.line(x + 8, y + 14.5, x + w - 8, y + 14.5);
-
-    doc.setFillColor(...REPORT_THEME.dark);
-    doc.roundedRect(x + 8, y + 18, w - 16, 18, 4, 4, 'F');
-
-    doc.setTextColor(152, 144, 216);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.2);
-    doc.text('AS YOU DESCRIBED IT', x + 14, y + 24);
-
-    doc.setTextColor(...REPORT_THEME.white);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(11);
-    const quoteLines = doc.splitTextToSize(goalText, w - 28);
-    doc.text(quoteLines.slice(0, 3), x + 14, y + 31);
-  }
-
-  private drawRoadmapAndSkills(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-  ): void {
-    const cardY = 148;
-    this.drawRoadmapPanel(doc, payload, 14, cardY, 88, 116);
-    this.drawSkillsPanel(doc, payload, 108, cardY, 88, 116);
-  }
-
-  private drawRoadmapPanel(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(
-      doc,
-      x + 8,
-      y + 10,
-      REPORT_THEME.mint,
-      '30 / 60 / 90 day roadmap',
-      REPORT_THEME.text,
-    );
-
-    this.drawPill(
-      doc,
-      x + w - 31,
-      y + 6.5,
-      payload.selectedChoice.title,
-      REPORT_THEME.mint,
-      REPORT_THEME.mint,
-      6.2,
-      [14, 100, 80],
-      0.4,
-      27,
-    );
-
-    const phases = [
+    this.drawSectionTitle(ctx, 'Profile Snapshot');
+    this.drawBodyText(ctx, profileSentence);
+    this.drawKeyValueRows(ctx, [
       {
-        label: 'Days 1-30',
-        title: 'Build your foundation',
-        items: payload.plan.roadmap.first30Days,
-        tone: REPORT_THEME.purple,
+        label: 'Profile',
+        value: payload.profileTitle,
       },
       {
-        label: 'Days 31-60',
-        title: 'Build your portfolio',
-        items: payload.plan.roadmap.next60Days,
-        tone: REPORT_THEME.purple,
+        label: 'Academic context',
+        value: this.describeAcademicContext(payload),
       },
       {
-        label: 'Days 61-90',
-        title: 'Go to market',
-        items: payload.plan.roadmap.next90Days,
-        tone: REPORT_THEME.green,
+        label: 'Strongest signals',
+        value: this.joinNaturalList(strongestSignals, 'motivation and curiosity'),
       },
-    ];
+      {
+        label: 'Orientation insight',
+        value: this.cleanSentence(
+          payload.diagnosis?.suggestedNextStep || 'A practical exploration strategy is recommended.',
+        ),
+      },
+    ]);
+  }
 
-    doc.setDrawColor(204, 198, 227);
-    doc.setLineWidth(0.4);
-    doc.line(x + 13, y + 24, x + 13, y + h - 14);
+  private drawChosenCareer(ctx: PdfContext, payload: ResultReportExportPayload): void {
+    this.drawSectionTitle(ctx, 'Chosen Career');
 
-    let blockY = y + 28;
-    phases.forEach((phase, index) => {
-      doc.setFillColor(...REPORT_THEME.white);
-      doc.setDrawColor(...phase.tone);
-      doc.circle(x + 13, blockY - 1.5, 1.4, 'FD');
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(16);
+    ctx.doc.text(payload.selectedChoice.title, ctx.marginX, ctx.cursorY);
+    ctx.cursorY += 7;
 
-      doc.setTextColor(...phase.tone);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.4);
-      doc.text(phase.label.toUpperCase(), x + 17, blockY);
+    this.drawBodyText(
+      ctx,
+      this.cleanSentence(payload.selectedChoice.shortDescription || payload.plan.explanation),
+      9.4,
+    );
+    this.drawLabelAndParagraph(ctx, 'Why this path fits', this.buildCareerFitText(payload));
+  }
 
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.setFontSize(10.5);
-      doc.text(phase.title, x + 17, blockY + 5);
+  private drawAlternativePaths(ctx: PdfContext, payload: ResultReportExportPayload): void {
+    const alternatives = payload.recommendations.topChoices
+      .filter((choice) => choice.id !== payload.selectedChoice.id)
+      .slice(0, 2);
 
-      const listItems = phase.items.slice(0, index === 2 ? 2 : 3);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...REPORT_THEME.muted);
-      doc.setFontSize(8.4);
-      const lines = doc.splitTextToSize(listItems.join('. '), w - 26);
-      doc.text(lines.slice(0, 4), x + 17, blockY + 10);
+    if (!alternatives.length) {
+      return;
+    }
 
-      blockY += index === 2 ? 29 : 31;
-    });
+    this.drawSectionTitle(ctx, 'Alternative Paths');
 
-    doc.setTextColor(188, 182, 167);
+    for (const option of alternatives) {
+      this.ensureSpace(ctx, 12);
+      ctx.doc.setTextColor(...THEME.ink);
+      ctx.doc.setFont('helvetica', 'bold');
+      ctx.doc.setFontSize(10.5);
+      ctx.doc.text(option.title, ctx.marginX, ctx.cursorY);
+      ctx.cursorY += 4.5;
+      this.drawBodyText(
+        ctx,
+        this.cleanSentence(option.reasons[0] || option.shortDescription || 'A credible nearby option.'),
+        8.7,
+      );
+    }
+  }
+
+  private drawPrograms(ctx: PdfContext, studyOptions: StudyOption[]): void {
+    this.drawSectionTitle(ctx, 'Schools And Programs');
+
+    if (!studyOptions.length) {
+      this.drawBodyText(ctx, 'No study programs were available for export in this run.');
+      return;
+    }
+
+    for (const option of studyOptions) {
+      this.ensureSpace(ctx, 26);
+      this.drawListItemTitle(
+        ctx,
+        option.program,
+        [option.school, option.city, option.degreeLevel].filter(Boolean).join(' | '),
+      );
+      this.drawBodyText(ctx, this.buildProgramNote(option), 8.7);
+      this.drawLinksRow(ctx, [
+        { label: 'View program', url: option.programUrl || option.link || '' },
+        {
+          label: 'School site',
+          url:
+            option.schoolUrl && option.schoolUrl !== (option.programUrl || option.link)
+              ? option.schoolUrl
+              : '',
+        },
+      ]);
+      this.drawDivider(ctx);
+    }
+  }
+
+  private drawRoadmap(ctx: PdfContext, payload: ResultReportExportPayload): void {
+    const competencies = this.takeList(
+      [
+        ...(payload.selectedChoice.coreSkills || []),
+        ...(payload.selectedChoice.technicalSkills || []),
+      ],
+      6,
+    );
+
+    this.drawSectionTitle(ctx, 'Competency Roadmap');
+    this.drawLabelAndParagraph(
+      ctx,
+      'Key competencies',
+      this.joinNaturalList(competencies, 'practical execution, communication, and consistency'),
+    );
+
+    this.drawRoadmapPhase(ctx, 'First 30 days', payload.plan.roadmap.first30Days);
+    this.drawRoadmapPhase(ctx, 'Days 31 to 60', payload.plan.roadmap.next60Days);
+    this.drawRoadmapPhase(ctx, 'Days 61 to 90', payload.plan.roadmap.next90Days);
+  }
+
+  private drawOpportunities(ctx: PdfContext, opportunities: OpportunityItem[]): void {
+    this.drawSectionTitle(ctx, 'Matched Opportunities');
+
+    if (!opportunities.length) {
+      this.drawBodyText(ctx, 'No opportunity matches were available for export in this run.');
+      return;
+    }
+
+    for (const opportunity of opportunities) {
+      this.ensureSpace(ctx, 24);
+      this.drawListItemTitle(
+        ctx,
+        opportunity.title,
+        [
+          opportunity.type,
+          opportunity.provider,
+          [opportunity.mode, opportunity.location].filter(Boolean).join(' | '),
+        ]
+          .filter(Boolean)
+          .join(' | '),
+      );
+      this.drawBodyText(ctx, this.buildOpportunityNote(opportunity), 8.7);
+      this.drawLinksRow(ctx, [{ label: 'Open opportunity', url: opportunity.sourceUrl }]);
+      this.drawDivider(ctx);
+    }
+  }
+
+  private drawSectionTitle(ctx: PdfContext, title: string): void {
+    this.ensureSpace(ctx, 16);
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(14.5);
+    ctx.doc.text(title, ctx.marginX, ctx.cursorY);
+    ctx.doc.setDrawColor(...THEME.line);
+    ctx.doc.setLineWidth(0.3);
+    ctx.doc.line(ctx.marginX, ctx.cursorY + 3.5, ctx.pageWidth - ctx.marginX, ctx.cursorY + 3.5);
+    ctx.cursorY += 10;
+  }
+
+  private drawBodyText(ctx: PdfContext, text: string, fontSize = 9.4): void {
+    if (!text.trim()) {
+      return;
+    }
+
+    ctx.doc.setTextColor(...THEME.muted);
+    ctx.doc.setFont('helvetica', 'normal');
+    ctx.doc.setFontSize(fontSize);
+    const lines = ctx.doc.splitTextToSize(text.trim(), ctx.width);
+    ctx.doc.text(lines, ctx.marginX, ctx.cursorY);
+    ctx.cursorY += lines.length * (fontSize * 0.45) + 2.5;
+  }
+
+  private drawLabelAndParagraph(ctx: PdfContext, label: string, value: string): void {
+    this.ensureSpace(ctx, 14);
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(9);
+    ctx.doc.text(label, ctx.marginX, ctx.cursorY);
+    ctx.cursorY += 4.5;
+    this.drawBodyText(ctx, value, 9.1);
+  }
+
+  private drawKeyValueRows(
+    ctx: PdfContext,
+    rows: Array<{ label: string; value: string }>,
+  ): void {
+    for (const row of rows) {
+      this.ensureSpace(ctx, 8);
+      ctx.doc.setTextColor(...THEME.ink);
+      ctx.doc.setFont('helvetica', 'bold');
+      ctx.doc.setFontSize(8.7);
+      ctx.doc.text(row.label, ctx.marginX, ctx.cursorY);
+
+      ctx.doc.setTextColor(...THEME.muted);
+      ctx.doc.setFont('helvetica', 'normal');
+      ctx.doc.setFontSize(8.7);
+      const lines = ctx.doc.splitTextToSize(row.value, ctx.width - 34);
+      ctx.doc.text(lines, ctx.marginX + 34, ctx.cursorY);
+      ctx.cursorY += Math.max(6, lines.length * 3.9 + 1);
+    }
+
+    ctx.cursorY += 2;
+  }
+
+  private drawListItemTitle(ctx: PdfContext, title: string, meta: string): void {
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(10.8);
+    ctx.doc.text(title, ctx.marginX, ctx.cursorY);
+    ctx.cursorY += 4.8;
+
+    if (meta) {
+      ctx.doc.setTextColor(...THEME.muted);
+      ctx.doc.setFont('helvetica', 'normal');
+      ctx.doc.setFontSize(8.4);
+      const lines = ctx.doc.splitTextToSize(meta, ctx.width);
+      ctx.doc.text(lines, ctx.marginX, ctx.cursorY);
+      ctx.cursorY += lines.length * 3.8 + 1;
+    }
+  }
+
+  private drawLinksRow(
+    ctx: PdfContext,
+    links: Array<{ label: string; url: string }>,
+  ): void {
+    const usableLinks = links.filter((item) => item.url.trim());
+    if (!usableLinks.length) {
+      return;
+    }
+
+    this.ensureSpace(ctx, 7);
+    let x = ctx.marginX;
+    for (const link of usableLinks) {
+      ctx.doc.setTextColor(...THEME.accent);
+      ctx.doc.setFont('helvetica', 'bold');
+      ctx.doc.setFontSize(8.4);
+      ctx.doc.textWithLink(link.label, x, ctx.cursorY, { url: link.url });
+      x += ctx.doc.getTextWidth(link.label) + 14;
+    }
+    ctx.cursorY += 5.5;
+  }
+
+  private drawRoadmapPhase(ctx: PdfContext, label: string, items: string[]): void {
+    this.ensureSpace(ctx, 16);
+    ctx.doc.setTextColor(...THEME.ink);
+    ctx.doc.setFont('helvetica', 'bold');
+    ctx.doc.setFontSize(9.1);
+    ctx.doc.text(label, ctx.marginX, ctx.cursorY);
+    ctx.cursorY += 4.5;
+
+    for (const item of items.slice(0, 3)) {
+      this.ensureSpace(ctx, 7);
+      ctx.doc.setTextColor(...THEME.muted);
+      ctx.doc.setFont('helvetica', 'normal');
+      ctx.doc.setFontSize(8.8);
+      ctx.doc.text('-', ctx.marginX, ctx.cursorY);
+      const lines = ctx.doc.splitTextToSize(item, ctx.width - 5);
+      ctx.doc.text(lines, ctx.marginX + 4, ctx.cursorY);
+      ctx.cursorY += lines.length * 4 + 1;
+    }
+
+    ctx.cursorY += 1.5;
+  }
+
+  private drawDivider(ctx: PdfContext): void {
+    ctx.doc.setDrawColor(...THEME.line);
+    ctx.doc.setLineWidth(0.22);
+    ctx.doc.line(ctx.marginX, ctx.cursorY, ctx.pageWidth - ctx.marginX, ctx.cursorY);
+    ctx.cursorY += 5.5;
+  }
+
+  private drawInlineLabel(doc: jsPDF, x: number, y: number, text: string): void {
+    const width = doc.getTextWidth(text) + 10;
+    doc.setFillColor(...THEME.accentSoft);
+    doc.roundedRect(x, y - 4.6, width, 7.4, 3.7, 3.7, 'F');
+    doc.setTextColor(...THEME.accent);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.2);
-    doc.text('ONGOING', x + 17, y + h - 18);
-
-    doc.setTextColor(...REPORT_THEME.text);
-    doc.setFontSize(10);
-    doc.text('Keep shipping', x + 17, y + h - 12.5);
-
-    doc.setTextColor(...REPORT_THEME.muted);
-    doc.setFontSize(8.3);
-    doc.text(
-      doc.splitTextToSize(
-        'Document everything you build. Stay consistent. Every project is evidence.',
-        w - 26,
-      ),
-      x + 17,
-      y + h - 7,
-    );
+    doc.setFontSize(8);
+    doc.text(text, x + 5, y);
   }
 
-  private drawSkillsPanel(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(
-      doc,
-      x + 8,
-      y + 10,
-      REPORT_THEME.sand,
-      'Skills to build',
-      [135, 83, 31],
-    );
+  private ensureSpace(ctx: PdfContext, heightNeeded: number): void {
+    if (ctx.cursorY + heightNeeded <= ctx.pageHeight - ctx.bottomY) {
+      return;
+    }
 
-    const skills = getCareerSkills(payload.selectedChoice.id);
-    let rowY = y + 27;
+    ctx.doc.addPage();
+    this.drawPageBackground(ctx);
+    ctx.cursorY = ctx.topY;
 
-    skills.forEach((skill) => {
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.2);
-      doc.text(skill.label, x + 8, rowY);
+    ctx.doc.setDrawColor(...THEME.line);
+    ctx.doc.setLineWidth(0.28);
+    ctx.doc.line(ctx.marginX, ctx.cursorY + 3, ctx.pageWidth - ctx.marginX, ctx.cursorY + 3);
 
-      doc.setTextColor(...REPORT_THEME.muted);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      doc.text(`${Math.round(skill.progress * 100)}%`, x + w - 8, rowY, {
-        align: 'right',
-      });
-
-      doc.setDrawColor(216, 210, 229);
-      doc.setLineWidth(1);
-      doc.line(x + 8, rowY + 3.5, x + w - 8, rowY + 3.5);
-
-      doc.setDrawColor(...REPORT_THEME.purple);
-      doc.setLineWidth(1.1);
-      doc.line(
-        x + 8,
-        rowY + 3.5,
-        x + 8 + (w - 16) * skill.progress,
-        rowY + 3.5,
-      );
-
-      rowY += 14;
+    ctx.doc.setTextColor(...THEME.muted);
+    ctx.doc.setFont('helvetica', 'normal');
+    ctx.doc.setFontSize(8);
+    ctx.doc.text('Career Guidance Report', ctx.marginX, ctx.cursorY);
+    ctx.doc.text(ctx.dateLabel, ctx.pageWidth - ctx.marginX, ctx.cursorY, {
+      align: 'right',
     });
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.3);
-    doc.setTextColor(...REPORT_THEME.muted);
-    doc.text(payload.readinessLabel, x + 8, y + h - 8);
+    ctx.cursorY += 12;
   }
 
-  private drawSectionHeading(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    title: string,
-    subtitle: string,
-  ): void {
-    doc.setTextColor(...REPORT_THEME.green);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.4);
-    doc.text(title.toUpperCase(), x, y);
+  private async loadPdfLogoAsset(): Promise<PdfLogoAsset | null> {
+    if (!this.logoAssetPromise) {
+      this.logoAssetPromise = this.renderSvgLogoAsset();
+    }
 
-    doc.setTextColor(...REPORT_THEME.text);
-    doc.setFontSize(16);
-    doc.text(title.replace(/\b\w/g, (char) => char.toUpperCase()), x, y + 9);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.2);
-    doc.setTextColor(...REPORT_THEME.muted);
-    doc.text(doc.splitTextToSize(subtitle, 120), x, y + 15);
+    return this.logoAssetPromise;
   }
 
-  private drawRecommendationsPanel(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(
-      doc,
-      x + 8,
-      y + 10,
-      REPORT_THEME.softPurple,
-      'Career recommendations',
-      REPORT_THEME.purple,
-    );
+  private async renderSvgLogoAsset(): Promise<PdfLogoAsset | null> {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return null;
+    }
 
-    let cardY = y + 21;
-    payload.recommendations.topChoices.slice(0, 3).forEach((choice) => {
-      const tone = CARD_TONES_BY_LABEL[choice.label];
-      const isSelected = choice.id === payload.selectedChoice.id;
+    try {
+      const svgMarkup = this.getPdfLogoSvgMarkup();
+      const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
 
-      doc.setFillColor(...REPORT_THEME.white);
-      doc.setDrawColor(...tone.accent);
-      doc.setLineWidth(isSelected ? 0.8 : 0.45);
-      doc.roundedRect(x + 8, cardY, w - 16, 27, 5, 5, 'FD');
+      try {
+        const image = await this.loadImage(blobUrl);
+        const scale = 4;
+        const canvas = document.createElement('canvas');
+        canvas.width = 340 * scale;
+        canvas.height = 90 * scale;
 
-      doc.setFillColor(...tone.surface);
-      doc.roundedRect(x + 8, cardY, 2, 27, 1, 1, 'F');
-
-      this.drawPill(
-        doc,
-        x + w - 34,
-        cardY + 4,
-        `${choice.score}%`,
-        tone.surface,
-        tone.surface,
-        5.8,
-        tone.text,
-        0.2,
-        18,
-      );
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11.5);
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.text(choice.title, x + 12, cardY + 8.5);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.6);
-      doc.setTextColor(...REPORT_THEME.muted);
-      doc.text(
-        doc.splitTextToSize(choice.shortDescription, w - 24),
-        x + 12,
-        cardY + 14,
-      );
-
-      const whyText = choice.reasons.slice(0, 2).join(' ');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.2);
-      doc.setTextColor(...tone.accent);
-      doc.text('WHY YOU', x + 12, cardY + 22.2);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.8);
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.text(doc.splitTextToSize(whyText, w - 24), x + 26, cardY + 22.2);
-
-      cardY += 31;
-    });
-  }
-
-  private drawStrengthsPanel(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(
-      doc,
-      x + 8,
-      y + 10,
-      REPORT_THEME.softPurple,
-      'Profile strengths',
-      REPORT_THEME.purple,
-    );
-
-    const strengths = buildStrengthMetrics(
-      payload.analyzedProfile,
-      payload.recommendations.profileSummary,
-    );
-
-    let rowY = y + 28;
-    strengths.forEach((strength) => {
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.text(strength.label, x + 8, rowY);
-
-      doc.setDrawColor(214, 209, 228);
-      doc.setLineWidth(1);
-      doc.line(x + 45, rowY - 0.5, x + w - 10, rowY - 0.5);
-
-      doc.setDrawColor(...REPORT_THEME.purple);
-      doc.setLineWidth(1.2);
-      doc.line(
-        x + 45,
-        rowY - 0.5,
-        x + 45 + (w - 55) * strength.progress,
-        rowY - 0.5,
-      );
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.4);
-      doc.setTextColor(...REPORT_THEME.muted);
-      doc.text(
-        `${Math.round(strength.progress * 100)}%`,
-        x + w - 8,
-        rowY,
-        { align: 'right' },
-      );
-
-      rowY += 14;
-    });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.3);
-    doc.setTextColor(...REPORT_THEME.muted);
-    doc.text(
-      doc.splitTextToSize(payload.profileSummary, w - 16).slice(0, 3),
-      x + 8,
-      y + h - 10,
-    );
-  }
-
-  private drawOpportunitiesPanel(
-    doc: jsPDF,
-    payload: ResultReportExportPayload,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): void {
-    this.drawCard(doc, x, y, w, h);
-    this.drawSectionBadge(
-      doc,
-      x + 8,
-      y + 10,
-      REPORT_THEME.mint,
-      'Study path & opportunities',
-      [14, 100, 80],
-    );
-
-    doc.setTextColor(...REPORT_THEME.muted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.8);
-    doc.text(
-      'Programs and opportunities aligned with your selected path.',
-      x + 48,
-      y + 10.3,
-    );
-
-    doc.setDrawColor(...REPORT_THEME.border);
-    doc.setLineWidth(0.3);
-    doc.line(x + 8, y + 16, x + w - 8, y + 16);
-
-    let rowY = y + 24;
-
-    payload.plan.studyOptions?.slice(0, 3).forEach((option) => {
-      this.drawPill(
-        doc,
-        x + 8,
-        rowY - 3,
-        toTitleCase(option.city || 'Morocco'),
-        REPORT_THEME.softPurple,
-        REPORT_THEME.softPurple,
-        5.2,
-        REPORT_THEME.purple,
-        0.2,
-      );
-
-      doc.setTextColor(...REPORT_THEME.text);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.2);
-      doc.text(option.program, x + 35, rowY + 1.5);
-
-      doc.setTextColor(...REPORT_THEME.muted);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.3);
-      const studyDetail = [
-        option.school,
-        option.degreeLevel,
-        option.whyRelevant,
-      ]
-        .filter(Boolean)
-        .join(' - ');
-      doc.text(doc.splitTextToSize(studyDetail, w - 50).slice(0, 2), x + 35, rowY + 7);
-
-      doc.setDrawColor(...REPORT_THEME.border);
-      doc.setLineWidth(0.25);
-      doc.line(x + 8, rowY + 14, x + w - 8, rowY + 14);
-      rowY += 17;
-    });
-
-    payload.plan.recommendedOpportunities
-      .slice(0, payload.plan.studyOptions?.length ? 3 : 5)
-      .forEach((opportunity) => {
-        const tone = this.getOpportunityTone(opportunity.type);
-        this.drawPill(
-          doc,
-          x + 8,
-          rowY - 3,
-          toTitleCase(opportunity.type),
-          tone.fill,
-          tone.fill,
-          5.2,
-          tone.text,
-          0.2,
-        );
-
-        doc.setTextColor(...REPORT_THEME.text);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.3);
-        doc.text(opportunity.title, x + 35, rowY + 1.5);
-
-        doc.setTextColor(...REPORT_THEME.muted);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.text(`${opportunity.provider} - ${opportunity.location}`, x + 35, rowY + 7);
-
-        const detailLines = doc.splitTextToSize(
-          [opportunity.whyRelevant, opportunity.sourceUrl].filter(Boolean).join(' - '),
-          w - 50,
-        );
-        doc.text(detailLines.slice(0, 2), x + 35, rowY + 11.5);
-
-        if (rowY < y + h - 24) {
-          doc.setDrawColor(...REPORT_THEME.border);
-          doc.setLineWidth(0.25);
-          doc.line(x + 8, rowY + 15, x + w - 8, rowY + 15);
+        const context = canvas.getContext('2d');
+        if (!context) {
+          return null;
         }
 
-        rowY += 18;
-      });
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        return {
+          dataUrl: canvas.toDataURL('image/png'),
+          width: 340,
+          height: 90,
+        };
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch {
+      return null;
+    }
   }
 
-  private drawCard(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
-    doc.setFillColor(...REPORT_THEME.white);
-    doc.setDrawColor(...REPORT_THEME.border);
-    doc.setLineWidth(0.35);
-    doc.roundedRect(x, y, width, height, 6, 6, 'FD');
-  }
-
-  private drawSectionBadge(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    fill: [number, number, number],
-    label: string,
-    textColor: [number, number, number] = REPORT_THEME.text,
-  ): void {
-    doc.setFillColor(...fill);
-    doc.roundedRect(x, y - 4.8, 8, 8, 2, 2, 'F');
-    doc.setTextColor(...textColor);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.4);
-    doc.text(label.toUpperCase(), x + 11, y);
-  }
-
-  private drawPill(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    label: string,
-    fill: [number, number, number],
-    border: [number, number, number],
-    height: number,
-    textColor: [number, number, number],
-    borderWidth = 0.2,
-    maxWidth?: number,
-  ): number {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(height > 14 ? 7.6 : 6.8);
-
-    const labelWidth = Math.min(
-      doc.getTextWidth(label) + 8,
-      maxWidth ?? Number.POSITIVE_INFINITY,
-    );
-
-    doc.setFillColor(...fill);
-    doc.setDrawColor(...border);
-    doc.setLineWidth(borderWidth);
-    doc.roundedRect(x, y, labelWidth, height, height / 2, height / 2, 'FD');
-
-    doc.setTextColor(...textColor);
-    doc.text(label, x + labelWidth / 2, y + height / 2 + 1.1, {
-      align: 'center',
+  private loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Unable to load logo image'));
+      image.src = src;
     });
-
-    return labelWidth;
   }
 
-  private drawMetric(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    value: string,
-    label: string,
-    valueColor: [number, number, number],
-  ): void {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(...valueColor);
-    doc.text(value, x, y);
-
-    doc.setFontSize(6.8);
-    doc.setTextColor(188, 182, 167);
-    doc.text(label.toUpperCase(), x, y + 6.5);
+  private getPdfLogoSvgMarkup(): string {
+    return `
+<svg width="340" height="90" viewBox="0 0 340 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Afaq logo">
+  <defs>
+    <linearGradient id="afaq-pdf-figure-gradient" x1="33%" y1="14%" x2="68%" y2="100%">
+      <stop offset="0%" stop-color="#C8C5F0" />
+      <stop offset="100%" stop-color="#8880D8" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(4 5)">
+    <path d="M8 64 C 19 51, 26 47, 33 49 S 48 58, 56 49 S 68 29, 77 23" fill="none" stroke="#534AB7" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 6"/>
+    <g transform="translate(8 64)">
+      <circle r="7" fill="#ffffff" stroke="#EF9F27" stroke-width="2" />
+      <circle r="2.4" fill="#EF9F27" />
+    </g>
+    <g transform="translate(34 50)">
+      <circle r="5" fill="#ffffff" stroke="#534AB7" stroke-width="2" />
+      <circle r="1.8" fill="#534AB7" />
+    </g>
+    <g transform="translate(56 47)">
+      <circle r="5" fill="#ffffff" stroke="#534AB7" stroke-width="2" />
+      <circle r="1.8" fill="#534AB7" />
+    </g>
+    <ellipse cx="45" cy="61.8" rx="8.5" ry="2.8" fill="#534AB7" opacity="0.12" />
+    <path d="M48 40 C 54 36, 63 31, 71 26" fill="none" stroke="#7F77DD" stroke-width="1" stroke-dasharray="3 4" stroke-linecap="round" opacity="0.48" />
+    <g transform="translate(37 41)">
+      <circle cx="8" cy="4.8" r="4.8" fill="url(#afaq-pdf-figure-gradient)" />
+      <rect x="4.2" y="10" width="9" height="14" rx="4.4" fill="url(#afaq-pdf-figure-gradient)" />
+      <path d="M5.4 13.5 C 2.8 15.4, 1.8 18.1, 1.2 21.5" fill="none" stroke="#AFA9EC" stroke-width="2" stroke-linecap="round" />
+      <path d="M12.3 14 C 16.8 13.5, 20 11.4, 23.6 8.4" fill="none" stroke="#AFA9EC" stroke-width="2" stroke-linecap="round" />
+      <path d="M6.6 23.8 C 5.6 27.8, 4.6 30.2, 1.8 33.2" fill="none" stroke="#8880D8" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M10.8 23.8 C 11.6 27.6, 13.3 29.6, 16.2 31.8" fill="none" stroke="#8880D8" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+    <g transform="translate(77 23)">
+      <circle r="10.5" fill="none" stroke="#1D9E75" stroke-width="2" stroke-dasharray="3 4" />
+      <path d="M-4.6 -4.6 L4.6 4.6 M4.6 -4.6 L-4.6 4.6" fill="none" stroke="#1D9E75" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+  </g>
+  <g transform="translate(106 0)">
+    <text x="0" y="44" fill="#534AB7" font-family="Inter, system-ui, sans-serif" font-size="46" font-weight="900" letter-spacing="-1.5">Afaq</text>
+    <text x="0" y="66" fill="#B4B2A9" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="700" letter-spacing="3.5">AI CAREER GUIDANCE</text>
+  </g>
+</svg>`.trim();
   }
 
-  private drawAfaqLogo(
-    doc: jsPDF,
-    x: number,
-    y: number,
-    dark: boolean,
-  ): void {
-    const wordmarkColor = dark ? REPORT_THEME.white : [83, 74, 183];
-    const taglineColor = dark ? REPORT_THEME.charcoal : [180, 178, 169];
-
-    doc.setDrawColor(83, 74, 183);
-    doc.setLineWidth(0.6);
-    doc.setLineDashPattern([1.2, 1.5], 0);
+  private drawFallbackLogo(doc: jsPDF, x: number, y: number): void {
+    doc.setDrawColor(...THEME.accent);
+    doc.setLineWidth(0.55);
+    doc.setLineDashPattern([1.1, 1.3], 0);
     doc.lines(
       [
         [4, -4],
@@ -880,94 +605,148 @@ export class ResultPdfExportService {
 
     doc.setFillColor(239, 159, 39);
     doc.circle(x, y + 8, 1.1, 'F');
-    doc.setFillColor(83, 74, 183);
+    doc.setFillColor(...THEME.accent);
     doc.circle(x + 8, y + 4.5, 0.8, 'F');
     doc.setFillColor(29, 158, 117);
     doc.circle(x + 15.2, y + 1.4, 0.85, 'F');
 
-    doc.setTextColor(...(wordmarkColor as [number, number, number]));
+    doc.setTextColor(...THEME.ink);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13.5);
     doc.text('Afaq.', x + 20, y + 5.5);
 
-    doc.setTextColor(...(taglineColor as [number, number, number]));
+    doc.setTextColor(...THEME.muted);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.4);
     doc.text('AI CAREER GUIDANCE', x + 20, y + 10.5);
   }
 
-  private drawFooters(doc: jsPDF, dateLabel: string): void {
+  private drawFooters(doc: jsPDF): void {
     const totalPages = doc.getNumberOfPages();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
     for (let page = 1; page <= totalPages; page += 1) {
       doc.setPage(page);
+      doc.setDrawColor(...THEME.line);
+      doc.setLineWidth(0.22);
+      doc.line(18, pageHeight - 11.5, pageWidth - 18, pageHeight - 11.5);
 
-      doc.setDrawColor(...REPORT_THEME.border);
-      doc.setLineWidth(0.25);
-      doc.line(14, pageHeight - 13, pageWidth - 14, pageHeight - 13);
-
-      this.drawAfaqLogo(doc, 14, pageHeight - 10.5, false);
-
-      doc.setTextColor(...REPORT_THEME.muted);
+      doc.setTextColor(...THEME.muted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.2);
-      doc.text(
-        'AI Career Guidance - Built for the Afaq product experience',
-        34,
-        pageHeight - 6.6,
-      );
-      doc.text(dateLabel, pageWidth - 54, pageHeight - 6.6);
-
-      this.drawPill(
-        doc,
-        pageWidth - 33,
-        pageHeight - 11.2,
-        `Page ${page} of ${totalPages}`,
-        REPORT_THEME.softPurple,
-        REPORT_THEME.softPurple,
-        6.2,
-        REPORT_THEME.purple,
-        0.2,
-        22,
-      );
+      doc.text('Prepared by Afaq for the ENSET Challenge final demo.', 18, pageHeight - 6.4);
+      doc.text(`Page ${page} of ${totalPages}`, pageWidth - 18, pageHeight - 6.4, {
+        align: 'right',
+      });
     }
   }
 
-  private compactFieldLabel(value: string): string {
-    const shortened = value
-      .split(' ')
+  private buildProfileSnapshotText(payload: ResultReportExportPayload): string {
+    const strengths = this.takeList(payload.analyzedProfile.strengths, 2);
+    const interests = this.takeList(payload.analyzedProfile.interests, 2);
+    const signals = [...strengths, ...interests].slice(0, 3);
+
+    return this.cleanSentence(
+      `The profile suggests a ${payload.profileTitle.toLowerCase()} mindset with strong signals in ${this.joinNaturalList(
+        signals,
+        'problem solving and curiosity',
+      )}. ${payload.diagnosis?.summary || 'A practical exploration strategy is recommended.'}`,
+    );
+  }
+
+  private buildCareerFitText(payload: ResultReportExportPayload): string {
+    const strengths = this.takeList(payload.analyzedProfile.strengths, 2);
+    const reasons = this.takeList(payload.selectedChoice.reasons, 2).map((reason) =>
+      this.cleanSentence(reason),
+    );
+    const parts = [
+      `This path fits the current profile well, especially around ${this.joinNaturalList(
+        strengths,
+        'practical learning and clear motivation',
+      )}.`,
+      ...reasons,
+    ];
+
+    return this.cleanSentence(parts.join(' '));
+  }
+
+  private buildProgramNote(option: StudyOption): string {
+    const reason = this.cleanSentence(option.whyRelevant || '');
+    if (reason) {
+      return reason;
+    }
+
+    const degree = option.degreeLevel ? `${option.degreeLevel.toLowerCase()} track` : 'program';
+    return `A relevant ${degree} with a clear link to the selected direction.`;
+  }
+
+  private buildOpportunityNote(opportunity: OpportunityItem): string {
+    const cleaned = this.cleanSentence(opportunity.whyRelevant || '');
+    if (cleaned && !/^relevant because/i.test(cleaned)) {
+      return cleaned;
+    }
+
+    const skills = this.takeList(opportunity.skills, 2).map((item) => item.toLowerCase());
+    const type = opportunity.type.toLowerCase();
+
+    if (type.includes('intern')) {
+      return skills.length
+        ? `Good entry point for internship-oriented exploration while strengthening ${this.joinNaturalList(skills)}.`
+        : 'A useful early step for gaining real-world exposure in this direction.';
+    }
+
+    if (type.includes('hack') || type.includes('challenge') || type.includes('competition')) {
+      return skills.length
+        ? `Strong early exposure to collaborative building, with room to sharpen ${this.joinNaturalList(skills)}.`
+        : 'A strong way to build proof of work, delivery rhythm, and visibility.';
+    }
+
+    if (type.includes('project') || type.includes('bootcamp')) {
+      return skills.length
+        ? `Useful for building portfolio evidence and practicing ${this.joinNaturalList(skills)}.`
+        : 'A practical option for building portfolio evidence and consistent execution.';
+    }
+
+    return cleaned || 'A credible next step for gaining practical exposure in the selected path.';
+  }
+
+  private describeAcademicContext(payload: ResultReportExportPayload): string {
+    const level = payload.analyzedProfile.academicLevel.replace(/_/g, ' ');
+    return `${this.toTitleCase(level)} | ${payload.skillLevelLabel}`;
+  }
+
+  private cleanSentence(text: string): string {
+    return String(text || '')
+      .replace(/^relevant because\s*/i, '')
+      .replace(/^this path fits because\s*/i, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.;:!?])/g, '$1')
+      .trim()
+      .replace(/^[a-z]/, (char) => char.toUpperCase())
+      .replace(/([^.!?])$/, '$1.');
+  }
+
+  private takeList(values: string[] | undefined, count: number): string[] {
+    return Array.isArray(values)
+      ? values.map((value) => value.trim()).filter(Boolean).slice(0, count)
+      : [];
+  }
+
+  private joinNaturalList(values: string[], fallback = 'relevant skills'): string {
+    const clean = values.map((value) => this.toTitleCase(value)).filter(Boolean);
+    if (!clean.length) return fallback;
+    if (clean.length === 1) return clean[0];
+    if (clean.length === 2) return `${clean[0]} and ${clean[1]}`;
+    return `${clean.slice(0, -1).join(', ')}, and ${clean.at(-1)}`;
+  }
+
+  private toTitleCase(value: string): string {
+    return String(value || '')
+      .split(/[\s-]+/g)
       .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => (word.length > 4 ? `${word.slice(0, 3)}.` : word))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-
-    return shortened || 'Exploration';
-  }
-
-  private getOpportunityTone(type: string): {
-    fill: [number, number, number];
-    text: [number, number, number];
-  } {
-    switch (type.toLowerCase()) {
-      case 'internship':
-      case 'internships':
-        return {
-          fill: REPORT_THEME.mint,
-          text: [14, 100, 80],
-        };
-      case 'bootcamp':
-      case 'bootcamps':
-        return {
-          fill: REPORT_THEME.sand,
-          text: [135, 83, 31],
-        };
-      default:
-        return {
-          fill: REPORT_THEME.softPurple,
-          text: REPORT_THEME.purple,
-        };
-    }
   }
 
   private formatDate(date: Date): string {
