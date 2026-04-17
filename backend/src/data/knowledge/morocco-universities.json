@@ -24,18 +24,6 @@
     "description": "Public engineering school with selective admission."
   },
   {
-    "name": "ENSA Rabat",
-    "fieldTags": ["engineering", "software", "informatique"],
-    "city": "rabat",
-    "type": "public",
-    "language": "fr",
-    "budgetBand": "low",
-    "riskBand": "balanced",
-    "program": "Applied Engineering",
-    "officialUrl": "https://ensar.uit.ac.ma/",
-    "description": "Public engineering pathway with applied tracks."
-  },
-  {
     "name": "ENCG Casablanca",
     "fieldTags": ["business", "management", "finance", "commerce"],
     "city": "casablanca",

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { selectStudyPrograms } from "../services/morocco-program-retrieval.service.js";
 import { reviewPlanDecision } from "../services/plan-review.service.js";
 
 async function readJson(relativePath) {
@@ -99,38 +100,13 @@ function rankOpportunities(opportunities, career, profile) {
     .slice(0, 4);
 }
 
-function selectStudyOptions(schools, career, profile) {
-  const targetTags = [
-    ...normalizeArray(career.tags),
-    ...normalizeArray(career.fieldTags),
-    normalizeText(profile.fieldOfStudy),
-  ];
-
-  const ranked = schools
-    .map((school) => ({
-      school,
-      score:
-        overlaps(school.fieldTags, targetTags).length * 3 +
-        (normalizeText(school.city) === normalizeText(profile.preferredLocation) ? 1 : 0),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .map((item) => item.school)
-    .slice(0, 4);
-
-  return ranked.map((school) => ({
-    program: school.program || career.title,
-    school: school.name,
-    city: school.city,
-    link: school.officialUrl,
-  }));
-}
-
 export const generatePlan = async (req, res) => {
   try {
-    const [careers, opportunities, schools] = await Promise.all([
+    const [careers, opportunities, schools, programs] = await Promise.all([
       readJson("../data/careers.json"),
       readJson("../data/oportunities.json"),
       readJson("../data/knowledge/morocco-universities.json"),
+      readJson("../data/knowledge/morocco-programs.json"),
     ]);
 
     const selectedCareerId = String(req.body?.selectedCareerId || "");
@@ -141,7 +117,12 @@ export const generatePlan = async (req, res) => {
 
     const profile = buildProfile(req.body || {}, career);
     const recommendedOpportunities = rankOpportunities(opportunities, career, profile);
-    const studyOptions = selectStudyOptions(schools, career, profile);
+    const { studyOptions, retrievalTrace } = selectStudyPrograms({
+      programs,
+      fallbackSchools: schools,
+      career,
+      profile,
+    });
 
     res.json({
       profile,
@@ -159,6 +140,7 @@ export const generatePlan = async (req, res) => {
         `PlanAgent: selected career -> ${career.title}`,
         `PlanAgent: matched ${recommendedOpportunities.length} opportunities`,
         `PlanAgent: matched ${studyOptions.length} study options`,
+        ...retrievalTrace,
       ],
     });
   } catch (error) {

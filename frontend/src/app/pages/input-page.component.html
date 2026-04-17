@@ -89,19 +89,44 @@
             Relevant schools and programs will appear here for the selected path.
           </div>
 
-          <a
+          <article
             *ngFor="let option of $any(item).options; trackBy: trackByStudyOption"
-            class="interview-list-row"
-            [href]="option.link || null"
-            target="_blank"
-            rel="noreferrer"
+            class="interview-list-row interview-study-row"
           >
             <span>
-              <strong>{{ option.school }}</strong>
-              <em>{{ option.program }}</em>
+              <strong>{{ option.program }}</strong>
+              <em>
+                {{ option.school }}
+                <ng-container *ngIf="option.degreeLevel">
+                  - {{ option.degreeLevel }}
+                </ng-container>
+              </em>
+              <em class="interview-study-row__reason" *ngIf="option.whyRelevant">
+                {{ option.whyRelevant }}
+              </em>
             </span>
-            <small>{{ option.city }}</small>
-          </a>
+            <div class="interview-study-row__actions">
+              <small>{{ option.city }}</small>
+              <a
+                *ngIf="option.programUrl || option.link"
+                class="interview-program-link"
+                [href]="option.programUrl || option.link"
+                target="_blank"
+                rel="noreferrer"
+              >
+                View program
+              </a>
+              <a
+                *ngIf="option.schoolUrl && option.schoolUrl !== (option.programUrl || option.link)"
+                class="interview-program-link interview-program-link--secondary"
+                [href]="option.schoolUrl"
+                target="_blank"
+                rel="noreferrer"
+              >
+                School
+              </a>
+            </div>
+          </article>
         </section>
 
         <section
@@ -205,6 +230,22 @@
           </button>
         </div>
       </ng-container>
+
+      <div
+        *ngIf="thinkingMessage() as message"
+        class="interview-message interview-message--assistant interview-message--thinking interview-message--transient"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <p>
+          <span>{{ message }}</span>
+          <span class="interview-thinking-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </p>
+      </div>
     </section>
 
     <footer class="interview-composer" aria-label="Answer composer">

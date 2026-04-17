@@ -105,10 +105,23 @@ export interface OpportunityItem {
 }
 
 export interface StudyOption {
+  id?: string;
   program: string;
   school: string;
+  degreeLevel?: string;
   city: string;
+  careerTargets?: string[];
+  programUrl?: string;
+  schoolUrl?: string;
   link: string;
+  sourceType?:
+    | 'direct-program'
+    | 'faculty-program-list'
+    | 'school-homepage'
+    | 'fallback-local';
+  sourceName?: string;
+  whyRelevant?: string;
+  retrievalScore?: number;
 }
 
 export interface PlanResult {

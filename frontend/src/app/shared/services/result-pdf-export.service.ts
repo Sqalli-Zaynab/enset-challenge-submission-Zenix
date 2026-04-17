@@ -708,12 +708,19 @@ export class ResultPdfExportService {
       doc.setTextColor(...REPORT_THEME.text);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10.2);
-      doc.text(option.school, x + 35, rowY + 1.5);
+      doc.text(option.program, x + 35, rowY + 1.5);
 
       doc.setTextColor(...REPORT_THEME.muted);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.3);
-      doc.text(doc.splitTextToSize(option.program, w - 50), x + 35, rowY + 7);
+      const studyDetail = [
+        option.school,
+        option.degreeLevel,
+        option.whyRelevant,
+      ]
+        .filter(Boolean)
+        .join(' - ');
+      doc.text(doc.splitTextToSize(studyDetail, w - 50).slice(0, 2), x + 35, rowY + 7);
 
       doc.setDrawColor(...REPORT_THEME.border);
       doc.setLineWidth(0.25);

@@ -151,6 +151,7 @@ export class InputPageComponent {
   readonly localError = signal<string | null>(null);
   readonly questionIndex = signal(0);
   readonly workflowBusy = signal(false);
+  readonly thinkingMessage = signal<string | null>(null);
   readonly activeActionGroupId = signal<string | null>(null);
   readonly activeCareerGroupId = signal<string | null>('career-initial');
   readonly timeline = signal<TimelineItem[]>([
@@ -204,6 +205,10 @@ export class InputPageComponent {
   });
 
   readonly progressText = computed(() => {
+    if (this.thinkingMessage()) {
+      return this.thinkingMessage() ?? 'Afaq is thinking';
+    }
+
     if (this.flow.isSubmitting()) {
       return 'Analyzing profile';
     }
@@ -306,12 +311,11 @@ export class InputPageComponent {
     this.localError.set(null);
     this.flow.clearPlanFeedback();
     this.addUserMessage(`I choose ${choice.title}.`);
-    this.addAssistantMessage(
-      'I am looking for schools and programs that can build a strong foundation for this path...',
-      'thinking',
-    );
 
-    await this.generatePlanForChoice(choice.id);
+    await this.generatePlanForChoice(
+      choice.id,
+      'I am looking for schools and programs that can build a strong foundation for this path...',
+    );
 
     const plan = this.flow.plan();
 
@@ -372,7 +376,7 @@ export class InputPageComponent {
         void this.regenerateOpportunities();
         break;
       case 'export-pdf':
-        this.exportPlan();
+        void this.exportPlan();
         break;
     }
   }
@@ -390,7 +394,7 @@ export class InputPageComponent {
   }
 
   trackByStudyOption(_: number, option: StudyOption): string {
-    return `${option.school}-${option.program}`;
+    return option.id ?? `${option.school}-${option.program}`;
   }
 
   trackByOpportunity(_: number, opportunity: OpportunityItem): number {
@@ -417,25 +421,23 @@ export class InputPageComponent {
   }
 
   private async runCareerRecommendationStage(isRegeneration: boolean): Promise<void> {
-    this.workflowBusy.set(true);
     this.localError.set(null);
     this.flow.clearSubmitFeedback();
     this.flow.clearPlanFeedback();
     this.activeCareerGroupId.set(null);
 
-    this.addAssistantMessage(
+    await this.runWithThinking(
       isRegeneration
         ? 'I am refreshing the career recommendations from your interview answers...'
         : 'I am analyzing your profile and preparing your strongest career matches...',
-      'thinking',
+      async () => {
+        await this.flow.analyzeAndRecommend();
+      },
     );
-
-    await this.flow.analyzeAndRecommend();
 
     const choices = this.flow.recommendations()?.topChoices.slice(0, 3) ?? [];
 
     if (!choices.length) {
-      this.workflowBusy.set(false);
       this.localError.set(
         'I could not build career recommendations right now. Please try again.',
       );
@@ -453,13 +455,15 @@ export class InputPageComponent {
         label: 'Regenerate recommendations',
       },
     ]);
-    this.workflowBusy.set(false);
   }
 
-  private async generatePlanForChoice(choiceId: string): Promise<void> {
-    this.workflowBusy.set(true);
-    await this.flow.generatePlan(choiceId);
-    this.workflowBusy.set(false);
+  private async generatePlanForChoice(
+    choiceId: string,
+    thinkingMessage: string,
+  ): Promise<void> {
+    await this.runWithThinking(thinkingMessage, async () => {
+      await this.flow.generatePlan(choiceId);
+    });
   }
 
   private async regenerateSchools(): Promise<void> {
@@ -471,8 +475,10 @@ export class InputPageComponent {
     }
 
     this.addUserMessage('Regenerate schools and programs.');
-    this.addAssistantMessage('I am checking the study path again...', 'thinking');
-    await this.generatePlanForChoice(selectedChoice.id);
+    await this.generatePlanForChoice(
+      selectedChoice.id,
+      'I am checking the study path again...',
+    );
 
     const plan = this.flow.plan();
 
@@ -508,7 +514,9 @@ export class InputPageComponent {
     }
 
     this.addUserMessage('Continue to roadmap.');
-    this.addAssistantMessage('I am building your competency roadmap...', 'thinking');
+    await this.runWithThinking('I am building your competency roadmap...', async () => {
+      await this.minimumThinkingDelay();
+    });
     this.addRoadmapBlock(plan);
     this.addActions([
       {
@@ -536,8 +544,10 @@ export class InputPageComponent {
     }
 
     this.addUserMessage('Regenerate roadmap.');
-    this.addAssistantMessage('I am rebuilding your roadmap...', 'thinking');
-    await this.generatePlanForChoice(selectedChoice.id);
+    await this.generatePlanForChoice(
+      selectedChoice.id,
+      'I am rebuilding your roadmap...',
+    );
 
     const plan = this.flow.plan();
 
@@ -573,7 +583,9 @@ export class InputPageComponent {
     }
 
     this.addUserMessage('Continue to opportunities.');
-    this.addAssistantMessage('I am matching opportunities for your path...', 'thinking');
+    await this.runWithThinking('I am matching opportunities for your path...', async () => {
+      await this.minimumThinkingDelay();
+    });
     this.addOpportunitiesBlock(plan.recommendedOpportunities);
     this.addActions([
       {
@@ -601,8 +613,10 @@ export class InputPageComponent {
     }
 
     this.addUserMessage('Regenerate opportunities.');
-    this.addAssistantMessage('I am checking the opportunity matches again...', 'thinking');
-    await this.generatePlanForChoice(selectedChoice.id);
+    await this.generatePlanForChoice(
+      selectedChoice.id,
+      'I am checking the opportunity matches again...',
+    );
 
     const plan = this.flow.plan();
 
@@ -660,7 +674,10 @@ export class InputPageComponent {
       return null;
     }
 
-    await this.generatePlanForChoice(selectedChoice.id);
+    await this.generatePlanForChoice(
+      selectedChoice.id,
+      'I am preparing the selected path...',
+    );
 
     return this.flow.plan();
   }
@@ -769,7 +786,7 @@ export class InputPageComponent {
     return `careers-${this.careerGroupCounter}`;
   }
 
-  private exportPlan(): void {
+  private async exportPlan(): Promise<void> {
     const selectedChoice = this.getSelectedChoice();
     const plan = this.flow.plan();
     const analyzedProfile = this.flow.analyzedProfile();
@@ -780,18 +797,21 @@ export class InputPageComponent {
       return;
     }
 
-    void this.exportService.exportResultReport({
-      analyzedProfile,
-      diagnosis: this.flow.diagnosis(),
-      recommendations,
-      selectedChoice,
-      plan,
-      profileTitle: getProfileTitle(selectedChoice.id),
-      profileSummary: this.getProfileSummary(),
-      traitTags: buildTraitTags(analyzedProfile, recommendations.profileSummary),
-      skillLevelLabel: getSkillLevelLabel(analyzedProfile),
-      readinessLabel: getReadinessLabel(analyzedProfile),
+    await this.runWithThinking('I am preparing your PDF report...', async () => {
+      await this.exportService.exportResultReport({
+        analyzedProfile,
+        diagnosis: this.flow.diagnosis(),
+        recommendations,
+        selectedChoice,
+        plan,
+        profileTitle: getProfileTitle(selectedChoice.id),
+        profileSummary: this.getProfileSummary(),
+        traitTags: buildTraitTags(analyzedProfile, recommendations.profileSummary),
+        skillLevelLabel: getSkillLevelLabel(analyzedProfile),
+        readinessLabel: getReadinessLabel(analyzedProfile),
+      });
     });
+    this.addAssistantMessage('Your PDF report is ready.', 'result');
   }
 
   private getProfileSummary(): string {
@@ -816,6 +836,42 @@ export class InputPageComponent {
         .recommendations()
         ?.topChoices.find((choice) => choice.id === selectedCareerId) ?? null
     );
+  }
+
+  private async runWithThinking<T>(
+    message: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const startedAt = Date.now();
+
+    this.workflowBusy.set(true);
+    this.thinkingMessage.set(message);
+    this.scrollThreadToBottom();
+
+    try {
+      const result = await operation();
+      const elapsed = Date.now() - startedAt;
+
+      if (elapsed < 420) {
+        await this.delay(420 - elapsed);
+      }
+
+      return result;
+    } finally {
+      this.thinkingMessage.set(null);
+      this.workflowBusy.set(false);
+      this.scrollThreadToBottom();
+    }
+  }
+
+  private minimumThinkingDelay(): Promise<void> {
+    return this.delay(420);
+  }
+
+  private delay(duration: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, duration);
+    });
   }
 
   private applyFixedInterviewToDraft(): void {

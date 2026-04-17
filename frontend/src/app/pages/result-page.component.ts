@@ -190,7 +190,7 @@ export class ResultPageComponent implements OnInit {
   }
 
   trackByStudyOption(_: number, option: StudyOption): string {
-    return `${option.school}-${option.program}`;
+    return option.id ?? `${option.school}-${option.program}`;
   }
 
   exportPlan(): void {

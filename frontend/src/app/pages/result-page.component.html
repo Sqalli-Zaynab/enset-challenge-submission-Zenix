@@ -207,11 +207,31 @@
                   >
                     <span class="opportunity-card__type">
                       {{ option.city }}
+                      <ng-container *ngIf="option.degreeLevel">
+                        - {{ option.degreeLevel }}
+                      </ng-container>
                     </span>
-                    <h4 class="opportunity-card__title">{{ option.school }}</h4>
-                    <p class="opportunity-card__meta">{{ option.program }}</p>
+                    <h4 class="opportunity-card__title">{{ option.program }}</h4>
+                    <p class="opportunity-card__meta">{{ option.school }}</p>
+                    <p class="opportunity-card__description" *ngIf="option.whyRelevant">
+                      {{ option.whyRelevant }}
+                    </p>
                     <p class="opportunity-card__description">
-                      <a [href]="option.link" target="_blank" rel="noreferrer">Official program link</a>
+                      <a
+                        [href]="option.programUrl || option.link"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View program
+                      </a>
+                      <ng-container
+                        *ngIf="option.schoolUrl && option.schoolUrl !== (option.programUrl || option.link)"
+                      >
+                        -
+                        <a [href]="option.schoolUrl" target="_blank" rel="noreferrer">
+                          School site
+                        </a>
+                      </ng-container>
                     </p>
                   </article>
                 </div>

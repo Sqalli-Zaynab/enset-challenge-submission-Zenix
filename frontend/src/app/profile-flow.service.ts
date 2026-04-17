@@ -796,10 +796,31 @@ export class ProfileFlowService {
     }
 
     return {
+      id: typeof value['id'] === 'string' ? value['id'] : undefined,
       program: typeof value['program'] === 'string' ? value['program'] : '',
       school: typeof value['school'] === 'string' ? value['school'] : '',
+      degreeLevel:
+        typeof value['degreeLevel'] === 'string' ? value['degreeLevel'] : '',
       city: typeof value['city'] === 'string' ? value['city'] : '',
       link: typeof value['link'] === 'string' ? value['link'] : '',
+      careerTargets: this.ensureStringArray(value['careerTargets']),
+      programUrl:
+        typeof value['programUrl'] === 'string' ? value['programUrl'] : '',
+      schoolUrl:
+        typeof value['schoolUrl'] === 'string' ? value['schoolUrl'] : '',
+      sourceType:
+        typeof value['sourceType'] === 'string'
+          ? (value['sourceType'] as StudyOption['sourceType'])
+          : 'fallback-local',
+      sourceName:
+        typeof value['sourceName'] === 'string' ? value['sourceName'] : '',
+      whyRelevant:
+        typeof value['whyRelevant'] === 'string' ? value['whyRelevant'] : '',
+      retrievalScore:
+        typeof value['retrievalScore'] === 'number' &&
+        Number.isFinite(value['retrievalScore'])
+          ? value['retrievalScore']
+          : undefined,
     };
   }
 
