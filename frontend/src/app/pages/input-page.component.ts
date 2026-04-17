@@ -84,6 +84,8 @@ type WorkflowActionType =
   | 'choose-another-career'
   | 'continue-opportunities'
   | 'regenerate-roadmap'
+  | 'back-schools'
+  | 'back-roadmap'
   | 'export-pdf'
   | 'regenerate-opportunities';
 
@@ -372,6 +374,12 @@ export class InputPageComponent {
       case 'regenerate-roadmap':
         void this.regenerateRoadmap();
         break;
+      case 'back-schools':
+        this.showSchoolsAgain();
+        break;
+      case 'back-roadmap':
+        this.showRoadmapAgain();
+        break;
       case 'regenerate-opportunities':
         void this.regenerateOpportunities();
         break;
@@ -529,7 +537,7 @@ export class InputPageComponent {
         label: 'Regenerate roadmap',
       },
       {
-        id: 'regenerate-schools',
+        id: 'back-schools',
         label: 'Back to schools',
       },
     ]);
@@ -601,6 +609,10 @@ export class InputPageComponent {
         id: 'choose-another-career',
         label: 'Choose another career',
       },
+      {
+        id: 'back-roadmap',
+        label: 'Back to roadmap',
+      },
     ]);
   }
 
@@ -658,6 +670,60 @@ export class InputPageComponent {
       {
         id: 'regenerate-careers',
         label: 'Regenerate recommendations',
+      },
+    ]);
+  }
+
+  private showSchoolsAgain(): void {
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('The study path is not ready yet.');
+      return;
+    }
+
+    this.addUserMessage('Back to schools.');
+    this.addSchoolsBlock(plan.studyOptions ?? []);
+    this.addActions([
+      {
+        id: 'continue-roadmap',
+        label: 'Continue to roadmap',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-schools',
+        label: 'Regenerate schools',
+      },
+      {
+        id: 'choose-another-career',
+        label: 'Choose another career',
+      },
+    ]);
+  }
+
+  private showRoadmapAgain(): void {
+    const plan = this.flow.plan();
+
+    if (!plan) {
+      this.localError.set('The roadmap is not ready yet.');
+      return;
+    }
+
+    this.addUserMessage('Back to roadmap.');
+    this.addRoadmapBlock(plan);
+    this.addActions([
+      {
+        id: 'continue-opportunities',
+        label: 'Continue to opportunities',
+        tone: 'primary',
+      },
+      {
+        id: 'regenerate-roadmap',
+        label: 'Regenerate roadmap',
+      },
+      {
+        id: 'back-schools',
+        label: 'Back to schools',
       },
     ]);
   }
@@ -927,10 +993,23 @@ export class InputPageComponent {
     const value = text.toLowerCase();
 
     if (this.hasAny(value, ['cyber', 'security', 'network'])) return 'cybersecurity';
+    if (this.hasAny(value, ['electronics', 'embedded', 'iot', 'arduino', 'robot', 'hardware', 'sensor'])) {
+      return 'embedded systems and electronics';
+    }
+    if (this.hasAny(value, ['industrial', 'factory', 'process', 'quality', 'logistics', 'operations'])) {
+      return 'industrial engineering';
+    }
     if (this.hasAny(value, ['ai', 'data', 'machine learning', 'python', 'statistics'])) return 'data and ai';
+    if (this.hasAny(value, ['graphic', 'visual', 'logo', 'branding'])) return 'graphic design';
     if (this.hasAny(value, ['design', 'ux', 'ui', 'figma', 'creative'])) return 'design';
+    if (this.hasAny(value, ['content', 'video', 'media', 'story', 'creator'])) return 'content and media';
+    if (this.hasAny(value, ['teach', 'education', 'edtech', 'learning', 'students', 'tutor'])) return 'education technology';
+    if (this.hasAny(value, ['hr', 'human resources', 'people', 'talent', 'training'])) return 'human resources';
+    if (this.hasAny(value, ['project', 'coordinate', 'organize', 'planning'])) return 'project management';
     if (this.hasAny(value, ['marketing', 'content', 'brand', 'social media'])) return 'marketing';
-    if (this.hasAny(value, ['business', 'startup', 'management', 'product'])) return 'business and product';
+    if (this.hasAny(value, ['business analysis', 'process', 'consulting', 'requirements'])) return 'business analysis';
+    if (this.hasAny(value, ['startup', 'entrepreneur', 'company', 'freedom'])) return 'entrepreneurship';
+    if (this.hasAny(value, ['business', 'management', 'product'])) return 'business and product';
     if (this.hasAny(value, ['code', 'coding', 'software', 'app', 'web', 'computer science', 'programming'])) {
       return 'software engineering';
     }
@@ -997,7 +1076,7 @@ export class InputPageComponent {
     if (this.hasAny(value, ['impact', 'help', 'useful', 'people', 'society'])) values.push('impact');
     if (this.hasAny(value, ['growth', 'learn', 'progress', 'improve'])) values.push('growth');
     if (this.hasAny(value, ['stable', 'stability', 'secure', 'income', 'salary'])) values.push('stability');
-    if (this.hasAny(value, ['creative', 'design', 'create', 'content'])) values.push('creativity');
+    if (this.hasAny(value, ['creative', 'design', 'create', 'content', 'visual', 'media'])) values.push('creativity');
     if (this.hasAny(value, ['freedom', 'remote', 'flexible', 'independent'])) values.push('freedom');
     if (this.hasAny(value, ['challenge', 'hard', 'ambitious', 'competitive'])) values.push('challenge');
     if (this.hasAny(value, ['innovation', 'ai', 'startup', 'new ideas'])) values.push('innovation');
@@ -1014,6 +1093,9 @@ export class InputPageComponent {
     if (this.hasAny(value, ['environment', 'green'])) causes.push('environment');
     if (this.hasAny(value, ['community', 'people', 'society'])) causes.push('community');
     if (this.hasAny(value, ['accessibility', 'inclusion'])) causes.push('accessibility');
+    if (this.hasAny(value, ['industry', 'factory', 'operations', 'production'])) causes.push('industry');
+    if (this.hasAny(value, ['business', 'commerce', 'startup', 'customer'])) causes.push('commerce');
+    if (this.hasAny(value, ['workplace', 'team', 'employee', 'talent'])) causes.push('workplace');
 
     return this.mergeUnique(causes);
   }
@@ -1023,9 +1105,9 @@ export class InputPageComponent {
     const strengths: string[] = [];
 
     if (this.hasAny(text, ['analytical', 'analysis', 'logic'])) strengths.push('analysis', 'logic');
-    if (this.hasAny(text, ['practical', 'build', 'hands-on'])) strengths.push('problem solving');
-    if (this.hasAny(text, ['creative', 'design', 'create'])) strengths.push('creativity');
-    if (this.hasAny(text, ['people', 'team', 'communication'])) strengths.push('communication', 'teamwork');
+    if (this.hasAny(text, ['practical', 'build', 'hands-on'])) strengths.push('problem solving', 'execution');
+    if (this.hasAny(text, ['creative', 'design', 'create'])) strengths.push('creativity', 'visual thinking');
+    if (this.hasAny(text, ['people', 'team', 'communication'])) strengths.push('communication', 'teamwork', 'empathy');
 
     return strengths.length ? strengths : ['curiosity'];
   }

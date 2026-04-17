@@ -79,10 +79,26 @@ export interface CareerChoice {
   label: 'best_fit' | 'alternative' | 'safe_option';
   id: string;
   title: string;
+  category?: string;
   score: number;
+  confidence?: number;
   entryDifficulty: 'easy' | 'medium' | 'hard';
   shortDescription: string;
+  description?: string;
+  explanation?: string;
   reasons: string[];
+  coreSkills?: string[];
+  technicalSkills?: string[];
+  softSkills?: string[];
+  relatedFields?: string[];
+  keywords?: string[];
+  programTags?: string[];
+  opportunityTags?: string[];
+  resourceLinks?: Array<{
+    label: string;
+    url: string;
+    source?: string;
+  }>;
   recommendedOpportunities: string[];
 }
 

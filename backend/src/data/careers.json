@@ -2,115 +2,641 @@
   {
     "id": "software-engineering",
     "title": "Software Engineering",
-    "shortDescription": "Build web, mobile and backend systems for real users.",
-    "tags": ["software", "coding", "web", "apps", "problem solving", "logic", "tech"],
-    "strengthTags": ["problem solving", "logic", "analysis", "teamwork", "attention to detail"],
+    "category": "tech",
+    "shortDescription": "Build software products and reliable systems.",
+    "description": "Software engineering fits students who enjoy logic, debugging, product building, and turning ideas into working digital tools.",
+    "coreSkills": ["problem solving", "logical reasoning", "systems thinking", "debugging", "product building"],
+    "technicalSkills": ["programming", "javascript", "typescript", "backend APIs", "databases", "git", "testing"],
+    "softSkills": ["persistence", "teamwork", "attention to detail", "communication"],
+    "relatedFields": ["web development", "backend", "mobile", "cloud", "data"],
+    "keywords": ["software", "coding", "apps", "programming", "developer", "systems"],
+    "roadmapTags": ["programming-foundations", "projects", "version-control", "backend"],
+    "programTags": ["computer-science", "software", "informatics", "genie-logiciel"],
+    "opportunityTags": ["hackathon", "internship", "opensource", "portfolio"],
+    "tags": ["software", "coding", "web", "apps", "problem solving", "logic", "tech", "programming", "developer"],
+    "strengthTags": ["problem solving", "logic", "analysis", "teamwork", "attention to detail", "debugging"],
     "causeTags": ["education", "health", "accessibility", "community"],
-    "fieldTags": ["software", "math", "science", "engineering"],
-    "goalKeywords": ["build", "app", "platform", "software", "engineer", "developer"],
-    "valueTags": ["stability", "impact", "growth"],
+    "fieldTags": ["software", "math", "science", "engineering", "computer science", "informatics"],
+    "goalKeywords": ["build", "app", "platform", "software", "engineer", "developer", "website", "product"],
+    "valueTags": ["stability", "impact", "growth", "innovation"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "medium",
     "recommendedOpportunities": ["hackathons", "projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Software Developers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/15-1252.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data frames this path around designing, developing, testing, and maintaining software.",
+      "Strong fit for profiles showing logical reasoning, persistence, and interest in building digital products."
+    ],
     "roadmap": {
-      "first30Days": ["Choose one stack: web or mobile.", "Build one small portfolio project.", "Practice Git and GitHub workflow."],
-      "next60Days": ["Join a hackathon or coding sprint.", "Add backend or database to your project.", "Start applying to beginner internships."],
-      "next90Days": ["Ship a polished project with README.", "Contribute to one open-source issue.", "Prepare technical interview basics."]
+      "first30Days": ["Choose one stack: web, mobile, or backend.", "Build one small portfolio project.", "Practice Git and clean project structure."],
+      "next60Days": ["Add a database or API to your project.", "Join a hackathon or coding sprint.", "Start applying to beginner internships."],
+      "next90Days": ["Ship a polished project with README.", "Contribute to one open-source issue.", "Practice technical interview basics."]
+    }
+  },
+  {
+    "id": "web-development",
+    "title": "Web Development",
+    "category": "tech",
+    "shortDescription": "Create websites, web apps, and interactive digital experiences.",
+    "description": "Web development is a practical path for students who want fast visible progress, portfolio projects, and a direct route into internships or freelance work.",
+    "coreSkills": ["interface building", "responsive design", "problem solving", "debugging", "user focus"],
+    "technicalSkills": ["html", "css", "javascript", "frontend frameworks", "apis", "browser basics", "deployment"],
+    "softSkills": ["attention to detail", "creativity", "communication", "self-learning"],
+    "relatedFields": ["software engineering", "ui ux", "digital products", "e-commerce"],
+    "keywords": ["web", "website", "frontend", "javascript", "responsive", "apps"],
+    "roadmapTags": ["frontend", "projects", "deployment", "portfolio"],
+    "programTags": ["computer-science", "software", "informatics", "web"],
+    "opportunityTags": ["projects", "internship", "freelance", "hackathon"],
+    "tags": ["web", "frontend", "javascript", "apps", "design", "software", "portfolio"],
+    "strengthTags": ["creativity", "attention to detail", "problem solving", "logic"],
+    "causeTags": ["education", "commerce", "community", "accessibility"],
+    "fieldTags": ["software", "design", "communication", "computer science", "informatics"],
+    "goalKeywords": ["website", "web", "frontend", "portfolio", "freelance", "app"],
+    "valueTags": ["creativity", "growth", "freedom", "impact"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps", "hackathons"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Web Developers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/15-1254.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data links this path to building web applications, databases, and interactive interfaces.",
+      "Strong fit for students who want visible project output and fast portfolio development."
+    ],
+    "roadmap": {
+      "first30Days": ["Build two responsive pages with HTML, CSS, and JavaScript.", "Learn GitHub Pages or simple deployment.", "Recreate one polished interface for practice."],
+      "next60Days": ["Learn one frontend framework.", "Connect a small app to an API.", "Build a portfolio with clear case studies."],
+      "next90Days": ["Ship a client-style project.", "Apply for web internships or freelance tasks.", "Practice accessibility and performance basics."]
     }
   },
   {
     "id": "data-and-ai",
-    "title": "Data & AI",
-    "shortDescription": "Work on intelligent systems, analytics and machine learning.",
-    "tags": ["ai", "data", "math", "research", "analysis", "python", "modeling", "tech"],
-    "strengthTags": ["analysis", "math", "research", "problem solving"],
+    "title": "Data Science & AI",
+    "category": "tech",
+    "shortDescription": "Use data, models, and AI systems to generate insight.",
+    "description": "Data Science and AI fit students who like patterns, mathematics, experimentation, and using information to make predictions or decisions.",
+    "coreSkills": ["analysis", "pattern recognition", "statistics", "experimentation", "critical thinking"],
+    "technicalSkills": ["python", "statistics", "machine learning", "data visualization", "sql", "model evaluation"],
+    "softSkills": ["curiosity", "research mindset", "precision", "clear explanation"],
+    "relatedFields": ["mathematics", "computer science", "engineering", "statistics", "data engineering"],
+    "keywords": ["ai", "data", "machine learning", "analytics", "python", "models"],
+    "roadmapTags": ["python", "statistics", "notebooks", "modeling"],
+    "programTags": ["data-science", "ai", "computer-science", "statistics"],
+    "opportunityTags": ["hackathon", "research", "kaggle", "portfolio"],
+    "tags": ["ai", "data", "math", "research", "analysis", "python", "modeling", "tech", "statistics"],
+    "strengthTags": ["analysis", "math", "research", "problem solving", "curiosity"],
     "causeTags": ["education", "health", "environment", "industry"],
-    "fieldTags": ["math", "science", "software", "engineering"],
-    "goalKeywords": ["ai", "data", "intelligence", "prediction", "automation", "models"],
-    "valueTags": ["impact", "growth", "innovation"],
+    "fieldTags": ["math", "science", "software", "engineering", "statistics", "computer science"],
+    "goalKeywords": ["ai", "data", "intelligence", "prediction", "automation", "models", "analytics"],
+    "valueTags": ["impact", "growth", "innovation", "challenge"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "hard",
-    "recommendedOpportunities": ["hackathons", "research", "projects", "bootcamps"],
+    "recommendedOpportunities": ["hackathons", "projects", "bootcamps", "internships"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Data Scientists",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/15-2051.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to analyzing data, building models, and communicating findings.",
+      "Strong fit for profiles showing analytical curiosity, mathematics, and willingness to practice consistently."
+    ],
     "roadmap": {
       "first30Days": ["Revise Python and statistics basics.", "Create one small data analysis notebook.", "Learn how datasets are cleaned and visualized."],
-      "next60Days": ["Build a mini AI or prediction project.", "Join an AI competition or hackathon.", "Learn model evaluation and experimentation."],
+      "next60Days": ["Build a mini prediction or classification project.", "Join an AI competition or hackathon.", "Learn model evaluation and experimentation."],
       "next90Days": ["Publish a portfolio case study.", "Target AI or data internships.", "Practice explaining your models clearly."]
     }
   },
   {
     "id": "cybersecurity",
     "title": "Cybersecurity",
-    "shortDescription": "Protect systems, networks and users against digital threats.",
-    "tags": ["security", "cyber", "networks", "logic", "tech", "investigation"],
-    "strengthTags": ["logic", "attention to detail", "analysis", "curiosity"],
+    "category": "tech",
+    "shortDescription": "Protect systems, networks, and users against digital threats.",
+    "description": "Cybersecurity fits students who enjoy investigation, networks, privacy, and solving precise technical problems under constraints.",
+    "coreSkills": ["risk thinking", "investigation", "systems thinking", "attention to detail", "ethical judgment"],
+    "technicalSkills": ["networking", "linux", "web security", "security monitoring", "incident response", "scripting"],
+    "softSkills": ["discipline", "curiosity", "patience", "responsibility"],
+    "relatedFields": ["computer networks", "software", "cloud", "information security", "systems administration"],
+    "keywords": ["security", "cyber", "networks", "privacy", "defense", "threats"],
+    "roadmapTags": ["networking", "linux", "security-labs", "ctf"],
+    "programTags": ["cybersecurity", "networks", "cloud", "informatics"],
+    "opportunityTags": ["ctf", "internship", "lab", "bootcamp"],
+    "tags": ["security", "cyber", "networks", "logic", "tech", "investigation", "privacy"],
+    "strengthTags": ["logic", "attention to detail", "analysis", "curiosity", "discipline"],
     "causeTags": ["privacy", "safety", "community", "finance"],
-    "fieldTags": ["software", "math", "science", "engineering"],
-    "goalKeywords": ["security", "protect", "privacy", "cyber", "defense"],
+    "fieldTags": ["software", "math", "science", "engineering", "networking", "computer science"],
+    "goalKeywords": ["security", "protect", "privacy", "cyber", "defense", "network"],
     "valueTags": ["stability", "impact", "challenge"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "hard",
-    "recommendedOpportunities": ["projects", "bootcamps", "internships"],
+    "recommendedOpportunities": ["projects", "bootcamps", "internships", "hackathons"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Information Security Analysts",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/15-1212.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data frames this path around protecting information systems and monitoring security risks.",
+      "Strong fit for careful, analytical profiles that can handle responsibility and continuous learning."
+    ],
     "roadmap": {
       "first30Days": ["Learn networking and Linux basics.", "Practice security labs safely.", "Understand common web vulnerabilities."],
-      "next60Days": ["Complete one security challenge platform track.", "Document a simple security audit project.", "Follow security news and incident reports."],
+      "next60Days": ["Complete one security challenge track.", "Document a simple security audit project.", "Follow security news and incident reports."],
       "next90Days": ["Build a portfolio with lab writeups.", "Join a security community or CTF.", "Apply to beginner security internships."]
     }
   },
   {
     "id": "ui-ux-design",
     "title": "UI/UX Design",
-    "shortDescription": "Design digital experiences that are useful, clear and enjoyable.",
-    "tags": ["design", "ux", "ui", "creative", "product", "research", "accessibility"],
-    "strengthTags": ["creativity", "communication", "empathy", "research"],
+    "category": "creative-tech",
+    "shortDescription": "Design digital experiences that are useful, clear, and enjoyable.",
+    "description": "UI/UX design fits students who combine empathy, creativity, research, and structured thinking to make digital products easier to use.",
+    "coreSkills": ["empathy", "user research", "visual hierarchy", "prototyping", "accessibility"],
+    "technicalSkills": ["figma", "wireframing", "interaction design", "design systems", "usability testing"],
+    "softSkills": ["communication", "creativity", "listening", "collaboration"],
+    "relatedFields": ["product design", "web development", "graphic design", "human-computer interaction"],
+    "keywords": ["design", "ux", "ui", "interface", "prototype", "research"],
+    "roadmapTags": ["figma", "case-study", "research", "prototype"],
+    "programTags": ["design", "visual-communication", "software", "media"],
+    "opportunityTags": ["portfolio", "design-challenge", "internship"],
+    "tags": ["design", "ux", "ui", "creative", "product", "research", "accessibility", "interface"],
+    "strengthTags": ["creativity", "communication", "empathy", "research", "listening"],
     "causeTags": ["education", "accessibility", "health", "community"],
-    "fieldTags": ["design", "software", "media", "communication"],
-    "goalKeywords": ["design", "experience", "interface", "product", "creative"],
+    "fieldTags": ["design", "software", "media", "communication", "product"],
+    "goalKeywords": ["design", "experience", "interface", "product", "creative", "users"],
     "valueTags": ["creativity", "impact", "freedom"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "easy",
-    "recommendedOpportunities": ["projects", "bootcamps", "internships"],
+    "recommendedOpportunities": ["projects", "bootcamps", "internships", "hackathons"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Web and Digital Interface Designers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/15-1255.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to designing digital interfaces and improving user interaction.",
+      "Strong fit for profiles showing empathy, creativity, communication, and product curiosity."
+    ],
     "roadmap": {
       "first30Days": ["Study design principles and accessibility.", "Redesign one app screen or flow.", "Learn Figma basics."],
       "next60Days": ["Create one case study from problem to prototype.", "Collect user feedback and iterate.", "Join a product or design challenge."],
-      "next90Days": ["Publish 2 to 3 portfolio case studies.", "Collaborate with a developer on a real prototype.", "Apply to design internships or freelance projects."]
+      "next90Days": ["Publish 2 to 3 portfolio case studies.", "Collaborate with a developer on a prototype.", "Apply to design internships."]
     }
   },
   {
     "id": "product-management",
-    "title": "Product Management & Entrepreneurship",
-    "shortDescription": "Turn ideas into products by combining user needs, business logic and execution.",
-    "tags": ["product", "business", "startup", "leadership", "strategy", "communication"],
+    "title": "Product Management",
+    "category": "business-tech",
+    "shortDescription": "Turn user needs and business goals into focused products.",
+    "description": "Product management fits students who like understanding people, organizing ideas, validating problems, and coordinating execution.",
+    "coreSkills": ["problem framing", "prioritization", "user discovery", "business thinking", "decision making"],
+    "technicalSkills": ["product metrics", "roadmapping", "market research", "no-code prototyping", "analytics basics"],
+    "softSkills": ["leadership", "communication", "organization", "negotiation", "teamwork"],
+    "relatedFields": ["business", "software", "management", "entrepreneurship", "communication"],
+    "keywords": ["product", "startup", "strategy", "users", "business", "roadmap"],
+    "roadmapTags": ["user-research", "mvp", "metrics", "roadmap"],
+    "programTags": ["business", "management", "software", "entrepreneurship"],
+    "opportunityTags": ["hackathon", "startup", "internship", "project"],
+    "tags": ["product", "business", "startup", "leadership", "strategy", "communication", "entrepreneur"],
     "strengthTags": ["communication", "leadership", "organization", "analysis", "teamwork"],
     "causeTags": ["education", "community", "finance", "health"],
-    "fieldTags": ["business", "software", "communication", "management"],
-    "goalKeywords": ["startup", "business", "lead", "product", "company", "entrepreneur"],
-    "valueTags": ["freedom", "growth", "impact"],
+    "fieldTags": ["business", "software", "communication", "management", "entrepreneurship"],
+    "goalKeywords": ["startup", "business", "lead", "product", "company", "entrepreneur", "manage"],
+    "valueTags": ["freedom", "growth", "impact", "innovation"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "medium",
     "recommendedOpportunities": ["hackathons", "projects", "bootcamps", "internships"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Project Management Specialists",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/13-1082.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data links adjacent product work to planning, coordination, stakeholder communication, and execution.",
+      "Strong fit for students who can combine user needs, business priorities, and team delivery."
+    ],
     "roadmap": {
-      "first30Days": ["Pick one problem space you care about.", "Interview potential users.", "Write a one-page product brief."],
+      "first30Days": ["Pick one problem space you care about.", "Interview five potential users.", "Write a one-page product brief."],
       "next60Days": ["Validate an MVP idea with a simple prototype.", "Learn product metrics and prioritization.", "Join a startup or innovation challenge."],
       "next90Days": ["Ship a small MVP with a team.", "Document learnings from user feedback.", "Apply to product or startup programs."]
     }
   },
   {
+    "id": "business-analysis",
+    "title": "Business Analysis",
+    "category": "business",
+    "shortDescription": "Analyze needs, processes, and data to improve decisions.",
+    "description": "Business analysis fits students who enjoy understanding how organizations work, asking precise questions, and translating needs into clear requirements.",
+    "coreSkills": ["systems analysis", "requirements gathering", "process mapping", "critical thinking", "decision support"],
+    "technicalSkills": ["excel", "sql basics", "dashboards", "documentation", "process modeling"],
+    "softSkills": ["communication", "active listening", "structured thinking", "stakeholder management"],
+    "relatedFields": ["management", "information systems", "data analytics", "operations", "consulting"],
+    "keywords": ["business", "analysis", "requirements", "process", "consulting", "systems"],
+    "roadmapTags": ["requirements", "analytics", "process-mapping", "documentation"],
+    "programTags": ["business", "management", "information-systems", "analytics"],
+    "opportunityTags": ["internship", "case-competition", "project"],
+    "tags": ["business", "analysis", "systems", "process", "data", "management", "consulting"],
+    "strengthTags": ["analysis", "communication", "organization", "problem solving", "logic"],
+    "causeTags": ["industry", "commerce", "community", "finance"],
+    "fieldTags": ["business", "management", "economics", "software", "statistics"],
+    "goalKeywords": ["business", "analyze", "process", "decision", "consulting", "improve"],
+    "valueTags": ["stability", "growth", "impact"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "medium",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Management Analysts",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/13-1111.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to organizational studies, systems, procedures, and operational improvement.",
+      "Strong fit for profiles showing analysis, communication, organization, and interest in business decisions."
+    ],
+    "roadmap": {
+      "first30Days": ["Learn requirements basics and process mapping.", "Analyze one business process around you.", "Practice Excel or spreadsheet dashboards."],
+      "next60Days": ["Write a small business requirements document.", "Learn SQL or dashboard basics.", "Join a case study or consulting challenge."],
+      "next90Days": ["Build a portfolio case: problem, data, recommendation.", "Apply to business analyst internships.", "Practice stakeholder interview scenarios."]
+    }
+  },
+  {
+    "id": "project-management",
+    "title": "Project Management",
+    "category": "business",
+    "shortDescription": "Plan, coordinate, and deliver projects with teams.",
+    "description": "Project management fits students who like organization, coordination, clear milestones, and helping teams deliver work on time.",
+    "coreSkills": ["planning", "coordination", "risk tracking", "prioritization", "execution discipline"],
+    "technicalSkills": ["project plans", "kanban", "agile basics", "reporting", "budget tracking"],
+    "softSkills": ["leadership", "communication", "teamwork", "conflict resolution"],
+    "relatedFields": ["operations", "product", "construction", "engineering", "business"],
+    "keywords": ["project", "planning", "coordination", "delivery", "agile", "operations"],
+    "roadmapTags": ["planning", "agile", "team-coordination", "reporting"],
+    "programTags": ["management", "operations", "business", "engineering"],
+    "opportunityTags": ["student-club", "internship", "project", "hackathon"],
+    "tags": ["project", "management", "organization", "planning", "teamwork", "operations"],
+    "strengthTags": ["organization", "communication", "leadership", "teamwork", "responsibility"],
+    "causeTags": ["community", "industry", "education"],
+    "fieldTags": ["business", "management", "engineering", "operations"],
+    "goalKeywords": ["manage", "organize", "lead", "coordinate", "deliver", "project"],
+    "valueTags": ["stability", "growth", "impact", "challenge"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "hackathons"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Project Management Specialists",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/13-1082.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data links this path to planning, execution, and coordination of work.",
+      "Strong fit for organized students who enjoy team alignment and visible progress."
+    ],
+    "roadmap": {
+      "first30Days": ["Learn project basics: scope, tasks, milestones, risks.", "Organize one small team or club initiative.", "Practice using a Kanban board."],
+      "next60Days": ["Lead a small project with weekly updates.", "Learn agile basics and reporting.", "Document project outcomes and blockers."],
+      "next90Days": ["Build a project management portfolio page.", "Apply to operations or project internships.", "Practice facilitation and stakeholder updates."]
+    }
+  },
+  {
     "id": "digital-marketing",
-    "title": "Digital Marketing & Content",
-    "shortDescription": "Grow audiences and brands through strategy, storytelling and digital channels.",
-    "tags": ["marketing", "content", "branding", "communication", "social media", "creative"],
+    "title": "Digital Marketing",
+    "category": "business-creative",
+    "shortDescription": "Grow audiences and brands through strategy and digital channels.",
+    "description": "Digital marketing fits students who enjoy communication, creativity, audience psychology, content strategy, and measuring what works.",
+    "coreSkills": ["storytelling", "audience understanding", "brand positioning", "campaign thinking", "analytics"],
+    "technicalSkills": ["content planning", "seo basics", "social media analytics", "email marketing", "copywriting"],
+    "softSkills": ["creativity", "communication", "organization", "adaptability"],
+    "relatedFields": ["business", "communication", "media", "marketing", "content"],
+    "keywords": ["marketing", "content", "branding", "social media", "growth", "audience"],
+    "roadmapTags": ["content", "analytics", "campaigns", "brand"],
+    "programTags": ["marketing", "communication", "business", "commerce"],
+    "opportunityTags": ["internship", "campaign", "student-club", "portfolio"],
+    "tags": ["marketing", "content", "branding", "communication", "social media", "creative", "growth"],
     "strengthTags": ["communication", "creativity", "organization", "analysis"],
     "causeTags": ["community", "education", "commerce"],
-    "fieldTags": ["business", "communication", "media"],
-    "goalKeywords": ["content", "brand", "marketing", "audience", "growth"],
+    "fieldTags": ["business", "communication", "media", "marketing"],
+    "goalKeywords": ["content", "brand", "marketing", "audience", "growth", "social media"],
     "valueTags": ["creativity", "freedom", "growth"],
     "locationOptions": ["local", "remote", "international"],
     "entryDifficulty": "easy",
     "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Marketing Managers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/11-2021.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to planning campaigns, understanding markets, and communicating value.",
+      "Strong fit for creative communicators who also want to measure results."
+    ],
     "roadmap": {
       "first30Days": ["Choose one niche and analyze strong brands.", "Create sample content pieces.", "Learn analytics basics."],
       "next60Days": ["Run a small campaign for a project or club.", "Measure engagement and iterate.", "Build a mini portfolio with results."],
       "next90Days": ["Apply to marketing internships.", "Offer content strategy for a student association or startup.", "Document growth experiments."]
+    }
+  },
+  {
+    "id": "graphic-design",
+    "title": "Graphic Design",
+    "category": "creative",
+    "shortDescription": "Create visual identities, layouts, and communication assets.",
+    "description": "Graphic design fits students who enjoy visual expression, layout, branding, and turning messages into clear visual systems.",
+    "coreSkills": ["visual hierarchy", "composition", "brand thinking", "layout", "creative ideation"],
+    "technicalSkills": ["illustrator", "photoshop", "figma", "typography", "print and digital assets"],
+    "softSkills": ["creativity", "attention to detail", "client communication", "iteration"],
+    "relatedFields": ["ui ux", "marketing", "media production", "branding", "content"],
+    "keywords": ["graphic", "design", "visual", "brand", "logo", "layout"],
+    "roadmapTags": ["visual-design", "portfolio", "typography", "branding"],
+    "programTags": ["design", "visual-communication", "media", "arts"],
+    "opportunityTags": ["portfolio", "freelance", "internship", "design-challenge"],
+    "tags": ["graphic design", "visual", "branding", "creative", "media", "communication"],
+    "strengthTags": ["creativity", "attention to detail", "communication", "visual thinking"],
+    "causeTags": ["community", "commerce", "education"],
+    "fieldTags": ["design", "media", "communication", "arts"],
+    "goalKeywords": ["design", "brand", "logo", "visual", "creative", "portfolio"],
+    "valueTags": ["creativity", "freedom", "impact"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Graphic Designers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/27-1024.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to creating graphics for commercial and promotional needs.",
+      "Strong fit for creative profiles with attention to detail and visual communication instincts."
+    ],
+    "roadmap": {
+      "first30Days": ["Study typography, color, and layout basics.", "Redesign three posters or social posts.", "Build a simple visual moodboard."],
+      "next60Days": ["Create a mini brand identity project.", "Learn export formats and design handoff.", "Collect feedback and iterate designs."],
+      "next90Days": ["Publish a visual portfolio.", "Offer design support to a club or startup.", "Apply to junior design internships."]
+    }
+  },
+  {
+    "id": "content-creation-media",
+    "title": "Content Creation & Media Production",
+    "category": "creative",
+    "shortDescription": "Produce useful content through writing, video, audio, or social media.",
+    "description": "Content creation and media production fit students who enjoy storytelling, explaining ideas, organizing narratives, and publishing consistently.",
+    "coreSkills": ["storytelling", "content planning", "audience empathy", "editing", "creative direction"],
+    "technicalSkills": ["video editing", "script writing", "audio basics", "camera basics", "social publishing"],
+    "softSkills": ["communication", "creativity", "consistency", "adaptability"],
+    "relatedFields": ["marketing", "education", "media", "design", "entrepreneurship"],
+    "keywords": ["content", "media", "video", "storytelling", "creator", "production"],
+    "roadmapTags": ["content-calendar", "editing", "storytelling", "publishing"],
+    "programTags": ["media", "communication", "design", "marketing"],
+    "opportunityTags": ["portfolio", "student-club", "internship", "campaign"],
+    "tags": ["content", "media", "video", "storytelling", "communication", "creative"],
+    "strengthTags": ["communication", "creativity", "organization", "empathy"],
+    "causeTags": ["education", "community", "commerce"],
+    "fieldTags": ["communication", "media", "marketing", "arts", "education"],
+    "goalKeywords": ["content", "creator", "video", "media", "story", "audience"],
+    "valueTags": ["creativity", "freedom", "impact", "growth"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Producers and Directors",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/27-2012.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects adjacent media roles to creative direction, production planning, and audience communication.",
+      "Strong fit for students who enjoy explaining, creating, and publishing ideas consistently."
+    ],
+    "roadmap": {
+      "first30Days": ["Choose one content niche and format.", "Create a simple content calendar.", "Publish three short pieces and review performance."],
+      "next60Days": ["Improve scripting, editing, and hooks.", "Collaborate with a club or local project.", "Build a small media portfolio."],
+      "next90Days": ["Create a themed content series.", "Apply to media or communication internships.", "Document growth and lessons learned."]
+    }
+  },
+  {
+    "id": "teaching-edtech",
+    "title": "Teaching & Educational Technology",
+    "category": "education",
+    "shortDescription": "Help learners progress through teaching, content, and learning tools.",
+    "description": "Teaching and educational technology fit students who care about learning, enjoy explaining ideas, and want to use tools to improve education.",
+    "coreSkills": ["instructional design", "clear explanation", "learner empathy", "curriculum thinking", "feedback"],
+    "technicalSkills": ["learning platforms", "content design", "assessment basics", "presentation tools", "ai for education"],
+    "softSkills": ["patience", "communication", "empathy", "organization"],
+    "relatedFields": ["education", "content", "training", "edtech", "community impact"],
+    "keywords": ["education", "teaching", "learning", "edtech", "curriculum", "students"],
+    "roadmapTags": ["teaching", "curriculum", "learning-content", "edtech-tools"],
+    "programTags": ["education", "training", "communication", "technology"],
+    "opportunityTags": ["volunteering", "student-club", "project", "internship"],
+    "tags": ["education", "teaching", "learning", "edtech", "communication", "content"],
+    "strengthTags": ["communication", "empathy", "organization", "patience", "leadership"],
+    "causeTags": ["education", "community", "accessibility"],
+    "fieldTags": ["education", "communication", "software", "media", "psychology"],
+    "goalKeywords": ["teach", "education", "students", "learning", "explain", "mentor"],
+    "valueTags": ["impact", "stability", "growth", "creativity"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Instructional Coordinators",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/25-9031.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to developing instructional material and incorporating technology into learning.",
+      "Strong fit for students motivated by education, explanation, and social impact."
+    ],
+    "roadmap": {
+      "first30Days": ["Choose one topic you can teach clearly.", "Create a short lesson or explainer.", "Test it with one learner and collect feedback."],
+      "next60Days": ["Build a mini learning module.", "Explore learning platforms and AI study tools.", "Volunteer as a tutor or mentor."],
+      "next90Days": ["Publish an education portfolio project.", "Join an edtech or teaching initiative.", "Apply to training or education internships."]
+    }
+  },
+  {
+    "id": "hr-talent-development",
+    "title": "HR & Talent Development",
+    "category": "people-business",
+    "shortDescription": "Support people, learning, hiring, and team growth.",
+    "description": "HR and talent development fit students who enjoy understanding people, communication, training, and helping teams grow.",
+    "coreSkills": ["people understanding", "training design", "recruitment basics", "coaching", "organizational thinking"],
+    "technicalSkills": ["hr tools", "training plans", "interview guides", "employee surveys", "basic analytics"],
+    "softSkills": ["empathy", "confidentiality", "communication", "listening", "organization"],
+    "relatedFields": ["business", "psychology", "education", "management", "training"],
+    "keywords": ["hr", "people", "talent", "training", "recruitment", "development"],
+    "roadmapTags": ["training", "recruitment", "people-analytics", "communication"],
+    "programTags": ["business", "management", "psychology", "human-resources"],
+    "opportunityTags": ["internship", "student-club", "volunteering", "project"],
+    "tags": ["hr", "people", "training", "talent", "communication", "management"],
+    "strengthTags": ["communication", "empathy", "organization", "listening", "teamwork"],
+    "causeTags": ["community", "education", "workplace"],
+    "fieldTags": ["business", "management", "psychology", "education", "communication"],
+    "goalKeywords": ["people", "team", "training", "hr", "talent", "recruit"],
+    "valueTags": ["impact", "stability", "growth"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "easy",
+    "recommendedOpportunities": ["internships", "projects", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Training and Development Specialists",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/13-1151.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to designing and delivering training that improves individual and organizational performance.",
+      "Strong fit for people-oriented profiles with empathy, communication, and organization."
+    ],
+    "roadmap": {
+      "first30Days": ["Learn HR basics: hiring, training, feedback.", "Create a simple interview guide.", "Volunteer to organize a small team activity."],
+      "next60Days": ["Design a short training session.", "Learn basic people analytics and surveys.", "Support recruitment or onboarding in a club."],
+      "next90Days": ["Build a portfolio of HR templates.", "Apply to HR or training internships.", "Practice facilitation and conflict-resolution scenarios."]
+    }
+  },
+  {
+    "id": "industrial-engineering",
+    "title": "Industrial Engineering",
+    "category": "engineering",
+    "shortDescription": "Improve systems, production, quality, and operations.",
+    "description": "Industrial engineering fits students who like practical systems, optimization, operations, and improving how work gets done.",
+    "coreSkills": ["process improvement", "optimization", "quality thinking", "systems analysis", "operations planning"],
+    "technicalSkills": ["lean basics", "simulation basics", "excel", "statistics", "quality control", "supply chain"],
+    "softSkills": ["organization", "teamwork", "problem solving", "precision"],
+    "relatedFields": ["manufacturing", "operations", "logistics", "quality", "engineering management"],
+    "keywords": ["industrial", "operations", "quality", "process", "logistics", "manufacturing"],
+    "roadmapTags": ["operations", "quality", "lean", "statistics"],
+    "programTags": ["industrial", "engineering", "logistics", "quality"],
+    "opportunityTags": ["internship", "factory-visit", "project", "case-competition"],
+    "tags": ["industrial", "engineering", "operations", "quality", "logistics", "process"],
+    "strengthTags": ["analysis", "organization", "problem solving", "attention to detail"],
+    "causeTags": ["industry", "environment", "commerce"],
+    "fieldTags": ["engineering", "math", "science", "industrial", "mechanical"],
+    "goalKeywords": ["industry", "factory", "operations", "quality", "process", "optimize"],
+    "valueTags": ["stability", "impact", "growth", "challenge"],
+    "locationOptions": ["local", "international"],
+    "entryDifficulty": "medium",
+    "recommendedOpportunities": ["internships", "projects", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Industrial Engineers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/17-2112.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to designing and improving integrated systems for production and operations.",
+      "Strong fit for practical analytical profiles who want visible impact in industry."
+    ],
+    "roadmap": {
+      "first30Days": ["Learn lean basics and process mapping.", "Analyze one daily process for waste or delays.", "Practice Excel for operations tracking."],
+      "next60Days": ["Study quality control and basic statistics.", "Visit or research one industrial workflow.", "Build a small process improvement case study."],
+      "next90Days": ["Apply to industrial or operations internships.", "Learn supply chain fundamentals.", "Document measurable improvements in a portfolio."]
+    }
+  },
+  {
+    "id": "embedded-systems-electronics",
+    "title": "Embedded Systems & Electronics",
+    "category": "engineering-tech",
+    "shortDescription": "Build connected devices, circuits, and hardware-software systems.",
+    "description": "Embedded systems and electronics fit students who enjoy hardware, circuits, practical engineering, and making physical systems behave intelligently.",
+    "coreSkills": ["electronics thinking", "hardware debugging", "systems thinking", "precision", "experimentation"],
+    "technicalSkills": ["arduino", "microcontrollers", "c programming", "sensors", "circuit basics", "iot"],
+    "softSkills": ["patience", "attention to detail", "problem solving", "persistence"],
+    "relatedFields": ["electronics", "iot", "robotics", "telecommunications", "automation"],
+    "keywords": ["embedded", "electronics", "iot", "hardware", "arduino", "sensors"],
+    "roadmapTags": ["electronics", "microcontrollers", "iot", "hardware-projects"],
+    "programTags": ["electronics", "electrical", "industrial", "engineering", "telecom"],
+    "opportunityTags": ["lab", "project", "internship", "competition"],
+    "tags": ["electronics", "embedded", "iot", "hardware", "engineering", "robotics"],
+    "strengthTags": ["problem solving", "attention to detail", "logic", "patience"],
+    "causeTags": ["industry", "health", "environment", "community"],
+    "fieldTags": ["electronics", "engineering", "physics", "science", "industrial"],
+    "goalKeywords": ["hardware", "electronics", "iot", "robot", "device", "sensor"],
+    "valueTags": ["challenge", "innovation", "stability", "impact"],
+    "locationOptions": ["local", "international"],
+    "entryDifficulty": "hard",
+    "recommendedOpportunities": ["projects", "internships", "hackathons"],
+    "resourceLinks": [
+      {
+        "label": "O*NET Electronics Engineers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/17-2072.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data connects this path to designing and testing electronic components and systems.",
+      "Strong fit for hands-on technical profiles who enjoy hardware, precision, and experimentation."
+    ],
+    "roadmap": {
+      "first30Days": ["Learn basic circuits and microcontroller concepts.", "Build one LED or sensor project.", "Document wiring, code, and results."],
+      "next60Days": ["Build an Arduino or ESP32 project.", "Learn C basics for embedded systems.", "Study sensors, communication, and power basics."],
+      "next90Days": ["Create an IoT or robotics mini-project.", "Apply to electronics or automation internships.", "Join a lab, robotics club, or hardware competition."]
+    }
+  },
+  {
+    "id": "entrepreneurship-startup-operations",
+    "title": "Entrepreneurship & Startup Operations",
+    "category": "business",
+    "shortDescription": "Validate ideas, coordinate operations, and build early-stage ventures.",
+    "description": "Entrepreneurship and startup operations fit students who want autonomy, action, problem validation, and learning across product, sales, operations, and teams.",
+    "coreSkills": ["initiative", "problem validation", "operations thinking", "sales mindset", "execution"],
+    "technicalSkills": ["no-code tools", "business modeling", "basic finance", "customer discovery", "metrics"],
+    "softSkills": ["resilience", "communication", "leadership", "adaptability", "ownership"],
+    "relatedFields": ["product management", "business", "marketing", "operations", "innovation"],
+    "keywords": ["startup", "entrepreneur", "business", "operations", "mvp", "sales"],
+    "roadmapTags": ["customer-discovery", "mvp", "sales", "operations"],
+    "programTags": ["entrepreneurship", "business", "management", "innovation"],
+    "opportunityTags": ["hackathon", "startup", "incubator", "project"],
+    "tags": ["startup", "entrepreneurship", "business", "operations", "product", "sales"],
+    "strengthTags": ["leadership", "communication", "organization", "adaptability", "initiative"],
+    "causeTags": ["community", "commerce", "education", "finance"],
+    "fieldTags": ["business", "management", "entrepreneurship", "communication"],
+    "goalKeywords": ["startup", "company", "business", "freedom", "entrepreneur", "sell"],
+    "valueTags": ["freedom", "growth", "impact", "innovation", "challenge"],
+    "locationOptions": ["local", "remote", "international"],
+    "entryDifficulty": "medium",
+    "recommendedOpportunities": ["hackathons", "projects", "internships", "bootcamps"],
+    "resourceLinks": [
+      {
+        "label": "O*NET General and Operations Managers",
+        "source": "O*NET",
+        "url": "https://www.onetonline.org/link/summary/11-1021.00"
+      }
+    ],
+    "evidenceSnippets": [
+      "Structured career data links adjacent operations leadership to planning, coordinating teams, and making decisions.",
+      "Strong fit for ambitious profiles who want autonomy, execution, and broad business exposure."
+    ],
+    "roadmap": {
+      "first30Days": ["Pick one problem and define the target user.", "Interview ten potential users.", "Sketch a simple value proposition."],
+      "next60Days": ["Build a no-code or lightweight MVP.", "Test pricing, channels, or acquisition.", "Join a startup challenge or incubator event."],
+      "next90Days": ["Run a small pilot with real users.", "Track simple metrics and feedback.", "Prepare a pitch deck and next-step plan."]
     }
   }
 ]

@@ -723,21 +723,67 @@ export class ProfileFlowService {
         typeof data.label === 'string' ? data.label : 'alternative',
       id: data.id,
       title: data.title,
+      category:
+        typeof data.category === 'string' ? data.category : undefined,
       score:
         typeof data.score === 'number' && Number.isFinite(data.score)
           ? data.score
           : 0,
+      confidence:
+        typeof data.confidence === 'number' && Number.isFinite(data.confidence)
+          ? data.confidence
+          : undefined,
       entryDifficulty:
         typeof data.entryDifficulty === 'string'
           ? data.entryDifficulty
           : 'medium',
       shortDescription:
         typeof data.shortDescription === 'string' ? data.shortDescription : '',
+      description:
+        typeof data.description === 'string' ? data.description : undefined,
+      explanation:
+        typeof data.explanation === 'string' ? data.explanation : undefined,
       reasons: this.ensureStringArray(data.reasons),
+      coreSkills: this.ensureStringArray(data.coreSkills),
+      technicalSkills: this.ensureStringArray(data.technicalSkills),
+      softSkills: this.ensureStringArray(data.softSkills),
+      relatedFields: this.ensureStringArray(data.relatedFields),
+      keywords: this.ensureStringArray(data.keywords),
+      programTags: this.ensureStringArray(data.programTags),
+      opportunityTags: this.ensureStringArray(data.opportunityTags),
+      resourceLinks: Array.isArray(data.resourceLinks)
+        ? data.resourceLinks
+            .map((item: unknown) => this.sanitizeCareerResourceLink(item))
+            .filter(
+              (
+                item: NonNullable<CareerChoice['resourceLinks']>[number] | null,
+              ): item is NonNullable<CareerChoice['resourceLinks']>[number] =>
+                item !== null,
+            )
+        : [],
       recommendedOpportunities: this.ensureStringArray(
         data.recommendedOpportunities,
       ),
     } as CareerChoice;
+  }
+
+  private sanitizeCareerResourceLink(value: unknown): NonNullable<CareerChoice['resourceLinks']>[number] | null {
+    if (!this.isRecord(value)) {
+      return null;
+    }
+
+    const label = typeof value['label'] === 'string' ? value['label'].trim() : '';
+    const url = typeof value['url'] === 'string' ? value['url'].trim() : '';
+
+    if (!label || !url) {
+      return null;
+    }
+
+    return {
+      label,
+      url,
+      source: typeof value['source'] === 'string' ? value['source'] : undefined,
+    };
   }
 
   private sanitizePlan(value: unknown): PlanResult | null {

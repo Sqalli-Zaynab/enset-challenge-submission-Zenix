@@ -1,7 +1,7 @@
 [
   {
     "name": "ENSIAS",
-    "fieldTags": ["engineering", "computer science", "informatique", "ai"],
+    "fieldTags": ["engineering", "computer science", "software", "informatics", "ai", "cybersecurity"],
     "city": "rabat",
     "type": "public",
     "language": "fr",
@@ -9,11 +9,11 @@
     "riskBand": "ambitious",
     "program": "Engineering and Computer Science",
     "officialUrl": "https://ensias.um5.ac.ma/",
-    "description": "Public engineering school known for computing and systems tracks."
+    "description": "Public engineering school known for computing, AI, systems, and cybersecurity tracks."
   },
   {
     "name": "EMI",
-    "fieldTags": ["engineering", "industrial", "informatique"],
+    "fieldTags": ["engineering", "industrial", "informatics", "electronics", "operations"],
     "city": "rabat",
     "type": "public",
     "language": "fr",
@@ -21,23 +21,83 @@
     "riskBand": "ambitious",
     "program": "Engineering",
     "officialUrl": "http://www.emi.ac.ma/",
-    "description": "Public engineering school with selective admission."
+    "description": "Public engineering school with selective engineering, industrial, and technical tracks."
+  },
+  {
+    "name": "ENSA Kenitra",
+    "fieldTags": ["engineering", "computer science", "software", "data", "electronics", "industrial"],
+    "city": "kenitra",
+    "type": "public",
+    "language": "fr",
+    "budgetBand": "low",
+    "riskBand": "ambitious",
+    "program": "Engineering",
+    "officialUrl": "https://ensa.uit.ac.ma/",
+    "description": "Public engineering school with computer, data, electronics, and engineering tracks."
+  },
+  {
+    "name": "EST Kenitra",
+    "fieldTags": ["informatics", "software", "web", "data", "management", "business", "industrial"],
+    "city": "kenitra",
+    "type": "public",
+    "language": "fr",
+    "budgetBand": "low",
+    "riskBand": "balanced",
+    "program": "DUT and applied programs",
+    "officialUrl": "https://est.uit.ac.ma/",
+    "description": "Applied public school with short professional programs in computing, management, and technical fields."
+  },
+  {
+    "name": "EST Fes",
+    "fieldTags": ["informatics", "software", "web", "data", "industrial", "management"],
+    "city": "fes",
+    "type": "public",
+    "language": "fr",
+    "budgetBand": "low",
+    "riskBand": "balanced",
+    "program": "DUT and bachelor programs",
+    "officialUrl": "https://www.est-usmba.ac.ma/",
+    "description": "Applied public school with computer science, industrial, and professional bachelor paths."
   },
   {
     "name": "ENCG Casablanca",
-    "fieldTags": ["business", "management", "finance", "commerce"],
+    "fieldTags": ["business", "management", "marketing", "commerce", "entrepreneurship", "hr"],
     "city": "casablanca",
     "type": "public",
     "language": "fr",
     "budgetBand": "low",
     "riskBand": "balanced",
-    "program": "Management and Business",
+    "program": "Commerce and Management",
     "officialUrl": "https://www.encgcasa.ma/",
-    "description": "Public school focused on management and commerce."
+    "description": "Public school focused on management, commerce, marketing, and business foundations."
   },
   {
-    "name": "Université Mohammed V",
-    "fieldTags": ["law", "arts", "business", "science"],
+    "name": "ISCAE",
+    "fieldTags": ["business", "management", "finance", "marketing", "entrepreneurship", "project management"],
+    "city": "casablanca",
+    "type": "public",
+    "language": "fr",
+    "budgetBand": "low",
+    "riskBand": "ambitious",
+    "program": "Business and Management",
+    "officialUrl": "https://www.groupeiscae.ma/",
+    "description": "Business school relevant for management, entrepreneurship, marketing, and business analysis tracks."
+  },
+  {
+    "name": "ESAV Marrakech",
+    "fieldTags": ["design", "media", "visual communication", "content", "creative"],
+    "city": "marrakech",
+    "type": "public",
+    "language": "fr",
+    "budgetBand": "balanced",
+    "riskBand": "balanced",
+    "program": "Visual arts and communication",
+    "officialUrl": "https://esavmarrakech.com/",
+    "description": "Creative school relevant for design, visual communication, and media-oriented paths."
+  },
+  {
+    "name": "Universite Mohammed V",
+    "fieldTags": ["education", "science", "business", "communication", "arts", "technology"],
     "city": "rabat",
     "type": "public",
     "language": "fr",
@@ -45,11 +105,11 @@
     "riskBand": "safe",
     "program": "Multi-discipline university programs",
     "officialUrl": "https://www.um5.ac.ma/um5/",
-    "description": "Large public university with broad academic offerings."
+    "description": "Large public university with broad academic offerings for education, science, business, and communication."
   },
   {
-    "name": "Université Hassan II de Casablanca",
-    "fieldTags": ["law", "business", "science", "arts"],
+    "name": "Universite Hassan II de Casablanca",
+    "fieldTags": ["business", "science", "arts", "communication", "education", "technology"],
     "city": "casablanca",
     "type": "public",
     "language": "fr",
@@ -57,11 +117,11 @@
     "riskBand": "safe",
     "program": "Multi-discipline university programs",
     "officialUrl": "https://www.univh2c.ma/",
-    "description": "Major public university in Casablanca with multiple faculties."
+    "description": "Major public university in Casablanca with multiple faculties and broad academic paths."
   },
   {
-    "name": "Université Cadi Ayyad",
-    "fieldTags": ["science", "business", "arts", "engineering"],
+    "name": "Universite Cadi Ayyad",
+    "fieldTags": ["science", "business", "arts", "engineering", "education", "media"],
     "city": "marrakech",
     "type": "public",
     "language": "fr",
@@ -73,7 +133,7 @@
   },
   {
     "name": "UIR",
-    "fieldTags": ["engineering", "business", "health", "law"],
+    "fieldTags": ["engineering", "business", "management", "technology", "communication", "entrepreneurship"],
     "city": "rabat",
     "type": "private",
     "language": "fr",
@@ -81,30 +141,6 @@
     "riskBand": "balanced",
     "program": "Private university programs",
     "officialUrl": "https://www.uir.ac.ma/",
-    "description": "Private university with multiple schools and programs."
-  },
-  {
-    "name": "Université Mundiapolis",
-    "fieldTags": ["business", "engineering", "law"],
-    "city": "casablanca",
-    "type": "private",
-    "language": "fr",
-    "budgetBand": "high",
-    "riskBand": "balanced",
-    "program": "Private university programs",
-    "officialUrl": "https://www.mundiapolis.ma/",
-    "description": "Private university in Casablanca with management and engineering tracks."
-  },
-  {
-    "name": "Université Euromed de Fès",
-    "fieldTags": ["engineering", "architecture", "business"],
-    "city": "fes",
-    "type": "private",
-    "language": "fr",
-    "budgetBand": "high",
-    "riskBand": "balanced",
-    "program": "Private university programs",
-    "officialUrl": "https://ueuromed.org/",
-    "description": "Private university with multidisciplinary programs in Fès."
+    "description": "Private university with engineering, business, management, and multidisciplinary programs."
   }
 ]

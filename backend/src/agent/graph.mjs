@@ -8,9 +8,7 @@
 // This replaces the manual sessions Map in chat.routes.js entirely.
 import { StateGraph, Annotation, START, END, MemorySaver } from "@langchain/langgraph";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { recommendCareersFromProfile } from "../services/career-recommendation.service.js";
 
 // Import all external nodes
 import { profileNode } from "./nodes/profilesNode.js";
@@ -21,9 +19,6 @@ import { humanCheckpointNode } from "./nodes/humanCheckpointNode.js";
 // Import chat and search nodes for Moroccan university advisor
 import { chatNode } from "./nodes/chatNode.js";
 import { searchNode } from "./nodes/searchNode.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
 
 // ------------------------------------------------------------
 // STATE DEFINITION (extended with conversation fields)
@@ -109,54 +104,6 @@ const State = Annotation.Root({
 });
 
 // ------------------------------------------------------------
-// HELPER FUNCTIONS (shared by multiple nodes)
-// ------------------------------------------------------------
-const CAREERS_PATH       = path.join(__dirname, "..", "data", "careers.json");
-const OPPORTUNITIES_PATH = path.join(__dirname, "..", "data", "oportunities.json");
-
-const skillRank      = { beginner: 1, intermediate: 2, advanced: 3 };
-const difficultyRank = { easy: 1, medium: 2, hard: 3 };
-
-async function readJson(filePath) {
-  const content = await readFile(filePath, "utf-8");
-  return JSON.parse(content);
-}
-
-function normalizeArray(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.flatMap(item => String(item).split(",")).map(item => item.trim().toLowerCase()).filter(Boolean);
-  }
-  return String(value).split(",").map(item => item.trim().toLowerCase()).filter(Boolean);
-}
-
-function normalizeText(value) {
-  return String(value || "").trim();
-}
-
-function textIncludesAny(text, keywords) {
-  const lowered = String(text || "").toLowerCase();
-  return keywords.some(keyword => lowered.includes(String(keyword).toLowerCase()));
-}
-
-function overlap(listA, listB) {
-  const setB = new Set(normalizeArray(listB));
-  return normalizeArray(listA).filter(item => setB.has(item));
-}
-
-function formatCareer(career) {
-  return {
-    id: career.id,
-    title: career.title,
-    score: career.score,
-    entryDifficulty: career.entryDifficulty,
-    shortDescription: career.shortDescription,
-    reasons: career.reasons.slice(0, 3),
-    recommendedOpportunities: career.recommendedOpportunities,
-  };
-}
-
-// ------------------------------------------------------------
 // NODES THAT REMAIN INLINE (for recommend/analyze modes)
 // ------------------------------------------------------------
 function diagnoseProfileNode(state) {
@@ -194,99 +141,24 @@ function diagnoseProfileNode(state) {
 }
 
 async function scoreCareersNode(state) {
-  const careers = await readJson(CAREERS_PATH);
-  const profile = state.profile;
-
-  const scoredCareers = careers.map(career => {
-    const reasons = [];
-    let score = 0;
-
-    const interestHits = overlap([...profile.passions, ...profile.interests], career.tags);
-    if (interestHits.length) {
-      score += Math.min(interestHits.length * 8, 24);
-      reasons.push(`matches your interests: ${interestHits.slice(0, 3).join(", ")}`);
-    }
-
-    const strengthHits = overlap(profile.strengths, career.strengthTags);
-    if (strengthHits.length) {
-      score += Math.min(strengthHits.length * 7, 21);
-      reasons.push(`fits your strengths: ${strengthHits.slice(0, 3).join(", ")}`);
-    }
-
-    const causeHits = overlap(profile.causes, career.causeTags);
-    if (causeHits.length) {
-      score += Math.min(causeHits.length * 5, 10);
-      reasons.push(`connects with causes you care about: ${causeHits.slice(0, 2).join(", ")}`);
-    }
-
-    if (career.fieldTags.some(tag => profile.fieldOfStudy.includes(tag))) {
-      score += 10;
-      reasons.push(`aligned with your current field: ${profile.fieldOfStudy}`);
-    }
-
-    const readinessGap = (skillRank[profile.skillLevel] || 1) - (difficultyRank[career.entryDifficulty] || 1);
-    if (readinessGap >= 0) {
-      score += 10;
-      reasons.push(`your current skill level can support this path`);
-    } else if (readinessGap === -1) {
-      score += 4;
-      reasons.push(`reachable with a short upskilling phase`);
-    }
-
-    if (textIncludesAny(profile.personalGoal, career.goalKeywords)) {
-      score += 15;
-      reasons.push(`matches your personal goal`);
-    }
-
-    if (profile.values.length && overlap(profile.values, career.valueTags).length) {
-      score += 8;
-      reasons.push(`fits your work values`);
-    }
-
-    if (profile.preferredLocation && career.locationOptions.includes(profile.preferredLocation)) {
-      score += 4;
-      reasons.push(`compatible with your preferred location`);
-    }
-
-    return { ...career, score, reasons };
-  });
-
-  scoredCareers.sort((a, b) => b.score - a.score);
+  const recommendationResult = await recommendCareersFromProfile(state.profile);
 
   return {
-    scoredCareers,
-    trace: [`MatchingAgent: evaluated ${scoredCareers.length} career paths`],
+    scoredCareers: recommendationResult.scoredCareers,
+    recommendations: {
+      profileSummary: recommendationResult.profileSummary,
+      topChoices: recommendationResult.topChoices,
+    },
+    trace: recommendationResult.agentTrace,
   };
 }
 
 function selectRecommendationsNode(state) {
-  const profile   = state.profile;
-  const sorted    = state.scoredCareers || [];
-  const readiness = profile.readiness || 1;
-
-  const main        = sorted[0] || null;
-  const alternative = sorted.find(item => item.id !== main?.id) || null;
-  const safe = sorted.find(
-    item =>
-      item.id !== main?.id &&
-      item.id !== alternative?.id &&
-      (difficultyRank[item.entryDifficulty] || 2) <= readiness,
-  ) || sorted[2] || null;
-
-  const recommendations = {
-    profileSummary: { themes: profile.themes, readiness, careerClarity: profile.careerClarity },
-    topChoices: [
-      main        ? { label: "best_fit",    ...formatCareer(main)        } : null,
-      alternative ? { label: "alternative", ...formatCareer(alternative) } : null,
-      safe        ? { label: "safe_option", ...formatCareer(safe)        } : null,
-    ].filter(Boolean),
-  };
-
   return {
-    recommendations,
+    recommendations: state.recommendations,
     trace: [
-      `ScenarioAgent: selected ${recommendations.topChoices.length} scenarios`,
-      `ExplainabilityAgent: generated reasons for each scenario`,
+      `ScenarioAgent: returned ${state.recommendations?.topChoices?.length || 0} deterministic career recommendations`,
+      "ExplainabilityAgent: attached structured reasons and RAG-backed career resources",
     ],
   };
 }

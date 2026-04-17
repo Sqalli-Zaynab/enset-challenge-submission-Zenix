@@ -45,20 +45,40 @@ export const RADAR_LEVELS = [0.28, 0.52, 0.76, 1];
 
 export const PROFILE_TITLE_BY_CAREER: Record<string, string> = {
   'software-engineering': 'The Logical Builder',
+  'web-development': 'The Web Craftsperson',
   'data-and-ai': 'The Insight Architect',
   cybersecurity: 'The Digital Guardian',
   'ui-ux-design': 'The Empathetic Designer',
-  'product-management': 'The Systems Strategist',
+  'product-management': 'The Product Strategist',
+  'business-analysis': 'The Business Interpreter',
+  'project-management': 'The Delivery Organizer',
   'digital-marketing': 'The Audience Builder',
+  'graphic-design': 'The Visual Communicator',
+  'content-creation-media': 'The Story Builder',
+  'teaching-edtech': 'The Learning Guide',
+  'hr-talent-development': 'The People Developer',
+  'industrial-engineering': 'The Process Optimizer',
+  'embedded-systems-electronics': 'The Hardware Systems Builder',
+  'entrepreneurship-startup-operations': 'The Venture Operator',
 };
 
 export const RADAR_SCORES_BY_CAREER: Record<string, number[]> = {
   'software-engineering': [0.88, 0.84, 0.58, 0.74, 0.62],
+  'web-development': [0.72, 0.86, 0.62, 0.68, 0.78],
   'data-and-ai': [0.94, 0.72, 0.5, 0.76, 0.46],
   cybersecurity: [0.91, 0.7, 0.44, 0.72, 0.48],
   'ui-ux-design': [0.56, 0.68, 0.82, 0.7, 0.92],
   'product-management': [0.7, 0.8, 0.9, 0.82, 0.66],
+  'business-analysis': [0.86, 0.62, 0.78, 0.72, 0.48],
+  'project-management': [0.68, 0.78, 0.9, 0.76, 0.48],
   'digital-marketing': [0.5, 0.68, 0.88, 0.68, 0.84],
+  'graphic-design': [0.46, 0.7, 0.7, 0.62, 0.94],
+  'content-creation-media': [0.48, 0.66, 0.88, 0.72, 0.9],
+  'teaching-edtech': [0.58, 0.62, 0.94, 0.9, 0.68],
+  'hr-talent-development': [0.56, 0.58, 0.94, 0.82, 0.52],
+  'industrial-engineering': [0.86, 0.84, 0.62, 0.74, 0.42],
+  'embedded-systems-electronics': [0.86, 0.9, 0.48, 0.7, 0.5],
+  'entrepreneurship-startup-operations': [0.7, 0.82, 0.88, 0.82, 0.72],
 };
 
 export const EMPTY_RADAR_SCORES = [0.62, 0.62, 0.62, 0.62, 0.62];
@@ -95,6 +115,14 @@ const CAREER_SKILLS_BY_ID: Record<string, SkillBuildMetric[]> = {
     { label: 'Git & version control', progress: 0.68 },
     { label: 'Algorithms & DSA', progress: 0.58 },
     { label: 'System design basics', progress: 0.42 },
+  ],
+  'web-development': [
+    { label: 'HTML / CSS / JavaScript', progress: 0.9 },
+    { label: 'Responsive UI', progress: 0.82 },
+    { label: 'Frontend framework', progress: 0.74 },
+    { label: 'APIs & deployment', progress: 0.66 },
+    { label: 'Accessibility basics', progress: 0.56 },
+    { label: 'Portfolio polish', progress: 0.48 },
   ],
   'data-and-ai': [
     { label: 'Python + notebooks', progress: 0.9 },
@@ -135,6 +163,78 @@ const CAREER_SKILLS_BY_ID: Record<string, SkillBuildMetric[]> = {
     { label: 'Analytics & reporting', progress: 0.64 },
     { label: 'Social growth systems', progress: 0.56 },
     { label: 'Brand storytelling', progress: 0.48 },
+  ],
+  'business-analysis': [
+    { label: 'Requirements discovery', progress: 0.88 },
+    { label: 'Process mapping', progress: 0.8 },
+    { label: 'Excel / dashboards', progress: 0.72 },
+    { label: 'SQL basics', progress: 0.62 },
+    { label: 'Stakeholder interviews', progress: 0.56 },
+    { label: 'Business case writing', progress: 0.46 },
+  ],
+  'project-management': [
+    { label: 'Planning & scope', progress: 0.88 },
+    { label: 'Kanban / agile basics', progress: 0.78 },
+    { label: 'Risk tracking', progress: 0.68 },
+    { label: 'Team coordination', progress: 0.64 },
+    { label: 'Progress reporting', progress: 0.56 },
+    { label: 'Stakeholder updates', progress: 0.48 },
+  ],
+  'graphic-design': [
+    { label: 'Typography', progress: 0.88 },
+    { label: 'Layout & composition', progress: 0.82 },
+    { label: 'Brand identity', progress: 0.74 },
+    { label: 'Figma / Adobe basics', progress: 0.66 },
+    { label: 'Design critique', progress: 0.56 },
+    { label: 'Portfolio presentation', progress: 0.48 },
+  ],
+  'content-creation-media': [
+    { label: 'Storytelling', progress: 0.88 },
+    { label: 'Content planning', progress: 0.8 },
+    { label: 'Script writing', progress: 0.72 },
+    { label: 'Video/audio editing', progress: 0.64 },
+    { label: 'Publishing rhythm', progress: 0.56 },
+    { label: 'Audience analytics', progress: 0.46 },
+  ],
+  'teaching-edtech': [
+    { label: 'Instructional design', progress: 0.88 },
+    { label: 'Clear explanation', progress: 0.82 },
+    { label: 'Learning content', progress: 0.72 },
+    { label: 'Assessment basics', progress: 0.62 },
+    { label: 'EdTech tools', progress: 0.56 },
+    { label: 'Learner feedback', progress: 0.48 },
+  ],
+  'hr-talent-development': [
+    { label: 'People communication', progress: 0.88 },
+    { label: 'Training design', progress: 0.78 },
+    { label: 'Interview guides', progress: 0.7 },
+    { label: 'Feedback systems', progress: 0.62 },
+    { label: 'HR basics', progress: 0.56 },
+    { label: 'Facilitation', progress: 0.48 },
+  ],
+  'industrial-engineering': [
+    { label: 'Process mapping', progress: 0.88 },
+    { label: 'Lean basics', progress: 0.8 },
+    { label: 'Quality control', progress: 0.7 },
+    { label: 'Operations analytics', progress: 0.64 },
+    { label: 'Supply chain basics', progress: 0.54 },
+    { label: 'Improvement case study', progress: 0.46 },
+  ],
+  'embedded-systems-electronics': [
+    { label: 'Circuit basics', progress: 0.88 },
+    { label: 'Microcontrollers', progress: 0.78 },
+    { label: 'C programming', progress: 0.7 },
+    { label: 'Sensors & IoT', progress: 0.62 },
+    { label: 'Hardware debugging', progress: 0.54 },
+    { label: 'Project documentation', progress: 0.46 },
+  ],
+  'entrepreneurship-startup-operations': [
+    { label: 'Customer discovery', progress: 0.88 },
+    { label: 'MVP validation', progress: 0.8 },
+    { label: 'Basic finance', progress: 0.68 },
+    { label: 'Sales experiments', progress: 0.62 },
+    { label: 'Operations setup', progress: 0.56 },
+    { label: 'Pitch storytelling', progress: 0.48 },
   ],
 };
 
@@ -298,15 +398,31 @@ export function buildStrengthMetrics(
 export function getCareerIconPath(choiceId: string): string {
   switch (choiceId) {
     case 'software-engineering':
+    case 'web-development':
       return 'M5 7h14M8 11l-3 3 3 3M16 11l3 3-3 3M12 7l-2 12';
     case 'data-and-ai':
       return 'M7 18h10M8 15l2-3 3 2 4-6M7 7h.01M12 7h.01M17 7h.01';
     case 'product-management':
+    case 'project-management':
+    case 'entrepreneurship-startup-operations':
       return 'M12 5v14M5 12h14M8 8h8v8H8z';
     case 'ui-ux-design':
+    case 'graphic-design':
       return 'M7 17l10-10M8 8h4v4H8zM12 12h4v4h-4z';
     case 'cybersecurity':
       return 'M12 4l6 3v4c0 4.5-2.6 7.7-6 9-3.4-1.3-6-4.5-6-9V7l6-3Z';
+    case 'business-analysis':
+      return 'M5 16h14M7 13l3-4 3 2 4-6M6 6h12';
+    case 'content-creation-media':
+      return 'M5 6h10l4 4v8H5zM8 10h7M8 14h5';
+    case 'teaching-edtech':
+      return 'M4 7l8-3 8 3-8 3-8-3ZM7 10v5c2 2 8 2 10 0v-5';
+    case 'hr-talent-development':
+      return 'M8 9a4 4 0 1 0 8 0M4 18c1.5-4 14.5-4 16 0';
+    case 'industrial-engineering':
+      return 'M5 17h14M7 17V9l5-3 5 3v8M9 13h6';
+    case 'embedded-systems-electronics':
+      return 'M7 7h10v10H7zM4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3';
     default:
       return 'M5 18h14M7 14V8h10v6M9.5 18v-4m5 4v-4';
   }

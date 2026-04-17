@@ -4,7 +4,7 @@
     "title": "ENSET Challenge Hackathon",
     "type": "Hackathons",
     "location": "local",
-    "tags": ["ai", "software", "product", "design"],
+    "tags": ["ai", "software", "product", "design", "startup", "education"],
     "description": "Build an agentic AI prototype in a team and present it to a jury."
   },
   {
@@ -12,39 +12,135 @@
     "title": "Remote Open Source Sprint",
     "type": "Projects",
     "location": "remote",
-    "tags": ["software", "web", "product"],
-    "description": "Collaborate on a real codebase, improve Git skills and ship features."
+    "tags": ["software", "web", "backend", "opensource", "git"],
+    "description": "Collaborate on a real codebase, improve Git skills, and ship useful features."
   },
   {
     "id": 3,
-    "title": "AI Bootcamp for Students",
+    "title": "AI Portfolio Bootcamp",
     "type": "Bootcamps",
     "location": "remote",
-    "tags": ["ai", "data", "math"],
-    "description": "Hands-on program covering Python, data, modeling and portfolio building."
+    "tags": ["ai", "data", "python", "machine learning", "analytics"],
+    "description": "Hands-on program covering Python, data analysis, model evaluation, and portfolio cases."
   },
   {
     "id": 4,
     "title": "Local Startup Internship",
     "type": "Internships",
     "location": "local",
-    "tags": ["software", "marketing", "product", "design"],
-    "description": "Work in a fast-moving startup and learn execution across multiple roles."
+    "tags": ["software", "marketing", "product", "startup", "operations", "business"],
+    "description": "Work in a fast-moving startup and learn execution across product, business, and growth."
   },
   {
     "id": 5,
     "title": "UX Research Challenge",
     "type": "Projects",
     "location": "remote",
-    "tags": ["design", "ux", "research", "accessibility"],
-    "description": "Create a small UX case study from interviews to prototype."
+    "tags": ["design", "ux", "research", "accessibility", "prototype"],
+    "description": "Create a small UX case study from user interviews to prototype."
   },
   {
     "id": 6,
     "title": "Cybersecurity Fundamentals Lab",
     "type": "Bootcamps",
     "location": "remote",
-    "tags": ["security", "cyber", "networks"],
+    "tags": ["security", "cyber", "networks", "linux", "ctf"],
     "description": "Practice cybersecurity basics in a safe lab environment."
+  },
+  {
+    "id": 7,
+    "title": "Digital Campaign Sprint",
+    "type": "Projects",
+    "location": "remote",
+    "tags": ["marketing", "content", "branding", "social media", "analytics"],
+    "description": "Plan, publish, and measure a small campaign for a student club or local project."
+  },
+  {
+    "id": 8,
+    "title": "Brand Identity Portfolio Challenge",
+    "type": "Projects",
+    "location": "remote",
+    "tags": ["graphic design", "visual", "branding", "creative", "portfolio"],
+    "description": "Create a compact brand identity system with logo, colors, typography, and social assets."
+  },
+  {
+    "id": 9,
+    "title": "Student Media Production Project",
+    "type": "Projects",
+    "location": "local",
+    "tags": ["media", "content", "video", "storytelling", "communication"],
+    "description": "Produce a short educational or social-impact video with planning, editing, and publishing."
+  },
+  {
+    "id": 10,
+    "title": "Business Case Competition",
+    "type": "Hackathons",
+    "location": "local",
+    "tags": ["business", "analysis", "strategy", "management", "consulting"],
+    "description": "Analyze a business problem, propose a solution, and present a structured recommendation."
+  },
+  {
+    "id": 11,
+    "title": "Project Coordinator Internship",
+    "type": "Internships",
+    "location": "local",
+    "tags": ["project", "management", "operations", "planning", "teamwork"],
+    "description": "Support planning, coordination, reporting, and follow-up for a real team project."
+  },
+  {
+    "id": 12,
+    "title": "EdTech Micro-Lesson Challenge",
+    "type": "Projects",
+    "location": "remote",
+    "tags": ["education", "teaching", "edtech", "content", "learning"],
+    "description": "Design and test a short digital lesson that helps students understand one difficult concept."
+  },
+  {
+    "id": 13,
+    "title": "HR Talent Workshop Assistant",
+    "type": "Internships",
+    "location": "local",
+    "tags": ["hr", "talent", "training", "people", "communication"],
+    "description": "Assist with training sessions, onboarding material, feedback collection, and team development."
+  },
+  {
+    "id": 14,
+    "title": "Industrial Process Improvement Case",
+    "type": "Projects",
+    "location": "local",
+    "tags": ["industrial", "operations", "quality", "logistics", "process"],
+    "description": "Analyze a workflow, identify waste or bottlenecks, and propose measurable improvements."
+  },
+  {
+    "id": 15,
+    "title": "Embedded IoT Mini Project",
+    "type": "Projects",
+    "location": "local",
+    "tags": ["embedded", "electronics", "iot", "hardware", "arduino", "sensors"],
+    "description": "Build a small connected device using sensors, microcontroller code, and simple documentation."
+  },
+  {
+    "id": 16,
+    "title": "Startup Validation Sprint",
+    "type": "Hackathons",
+    "location": "local",
+    "tags": ["startup", "entrepreneurship", "business", "product", "mvp", "sales"],
+    "description": "Validate a problem, interview users, sketch an MVP, and pitch a practical next step."
+  },
+  {
+    "id": 17,
+    "title": "Web Portfolio Build Week",
+    "type": "Bootcamps",
+    "location": "remote",
+    "tags": ["web", "frontend", "javascript", "portfolio", "deployment"],
+    "description": "Build and publish a clean personal portfolio with one real project case study."
+  },
+  {
+    "id": 18,
+    "title": "Operations Analytics Internship",
+    "type": "Internships",
+    "location": "local",
+    "tags": ["business analysis", "operations", "data", "excel", "dashboard", "process"],
+    "description": "Support operational reporting, spreadsheet analysis, and improvement tracking."
   }
 ]

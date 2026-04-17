@@ -61,7 +61,10 @@ function buildProgramQuery(career, profile) {
     normalizeText(career?.id),
     normalizeText(career?.title),
     ...normalizeArray(career?.tags),
+    ...normalizeArray(career?.keywords),
     ...normalizeArray(career?.fieldTags),
+    ...normalizeArray(career?.programTags),
+    ...normalizeArray(career?.relatedFields),
     ...normalizeArray(profile?.fieldOfStudy),
     ...normalizeArray(profile?.interests),
     ...normalizeArray(profile?.passions),
@@ -162,6 +165,9 @@ function fallbackFromSchool(school, career, profile) {
     overlaps(normalizeArray(school.fieldTags), [
       ...normalizeArray(career?.tags),
       ...normalizeArray(career?.fieldTags),
+      ...normalizeArray(career?.programTags),
+      ...normalizeArray(career?.relatedFields),
+      ...normalizeArray(career?.keywords),
       normalizeText(profile?.fieldOfStudy),
     ]).length * 4;
 

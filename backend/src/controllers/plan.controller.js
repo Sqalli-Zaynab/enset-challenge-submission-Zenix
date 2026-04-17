@@ -3,9 +3,18 @@ import { readFile } from "node:fs/promises";
 import { selectStudyPrograms } from "../services/morocco-program-retrieval.service.js";
 import { reviewPlanDecision } from "../services/plan-review.service.js";
 
-async function readJson(relativePath) {
-  const content = await readFile(new URL(relativePath, import.meta.url), "utf-8");
-  return JSON.parse(content);
+async function readJson(relativePath, fallbackValue = null) {
+  try {
+    const content = await readFile(new URL(relativePath, import.meta.url), "utf-8");
+    return JSON.parse(content);
+  } catch (error) {
+    if (fallbackValue !== null) {
+      console.warn(`Plan data fallback used for ${relativePath}:`, error.message);
+      return fallbackValue;
+    }
+
+    throw error;
+  }
 }
 
 function normalizeArray(value) {
@@ -38,15 +47,18 @@ function inferThemes(profile, career) {
     ...normalizeArray(profile.interests),
     ...normalizeArray(profile.strengths),
     ...normalizeArray(career?.tags),
+    ...normalizeArray(career?.keywords),
+    ...normalizeArray(career?.category),
   ].join(" ");
 
   const themes = [];
 
   if (/(software|coding|web|apps|tech|engineering)/.test(signals)) themes.push("technology");
   if (/(ai|data|math|analysis|research)/.test(signals)) themes.push("analysis");
-  if (/(design|creative|content|ux|ui)/.test(signals)) themes.push("creativity");
-  if (/(business|startup|product|management|marketing)/.test(signals)) themes.push("business");
-  if (/(education|health|community|impact|accessibility)/.test(signals)) themes.push("impact");
+  if (/(design|creative|content|ux|ui|media|graphic)/.test(signals)) themes.push("creativity");
+  if (/(business|startup|product|management|marketing|hr|operations)/.test(signals)) themes.push("business");
+  if (/(education|teaching|health|community|impact|accessibility|talent)/.test(signals)) themes.push("impact");
+  if (/(industrial|electronics|embedded|iot|hardware|factory|quality)/.test(signals)) themes.push("engineering");
 
   return themes.length ? themes : ["career exploration"];
 }
@@ -74,7 +86,12 @@ function buildProfile(payload, career) {
 function rankOpportunities(opportunities, career, profile) {
   const preferredTypes = new Set(normalizeArray(career.recommendedOpportunities));
   const profileTypes = new Set(normalizeArray(profile.opportunityTypes));
-  const careerTags = normalizeArray(career.tags);
+  const careerTags = [
+    ...normalizeArray(career.tags),
+    ...normalizeArray(career.keywords),
+    ...normalizeArray(career.opportunityTags),
+    ...normalizeArray(career.relatedFields),
+  ];
   const profileSignals = [
     ...normalizeArray(profile.interests),
     ...normalizeArray(profile.passions),
@@ -104,9 +121,9 @@ export const generatePlan = async (req, res) => {
   try {
     const [careers, opportunities, schools, programs] = await Promise.all([
       readJson("../data/careers.json"),
-      readJson("../data/oportunities.json"),
-      readJson("../data/knowledge/morocco-universities.json"),
-      readJson("../data/knowledge/morocco-programs.json"),
+      readJson("../data/oportunities.json", []),
+      readJson("../data/knowledge/morocco-universities.json", []),
+      readJson("../data/knowledge/morocco-programs.json", []),
     ]);
 
     const selectedCareerId = String(req.body?.selectedCareerId || "");
