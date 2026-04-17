@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { selectStudyPrograms } from "../services/morocco-program-retrieval.service.js";
+import { buildOpportunityRecommendations } from "../services/opportunity-matching.service.js";
 import { reviewPlanDecision } from "../services/plan-review.service.js";
 
 async function readJson(relativePath, fallbackValue = null) {
@@ -34,11 +35,6 @@ function normalizeArray(value) {
 
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
-}
-
-function overlaps(left = [], right = []) {
-  const rightSet = new Set(normalizeArray(right));
-  return normalizeArray(left).filter((item) => rightSet.has(item));
 }
 
 function inferThemes(profile, career) {
@@ -83,45 +79,10 @@ function buildProfile(payload, career) {
   };
 }
 
-function rankOpportunities(opportunities, career, profile) {
-  const preferredTypes = new Set(normalizeArray(career.recommendedOpportunities));
-  const profileTypes = new Set(normalizeArray(profile.opportunityTypes));
-  const careerTags = [
-    ...normalizeArray(career.tags),
-    ...normalizeArray(career.keywords),
-    ...normalizeArray(career.opportunityTags),
-    ...normalizeArray(career.relatedFields),
-  ];
-  const profileSignals = [
-    ...normalizeArray(profile.interests),
-    ...normalizeArray(profile.passions),
-    normalizeText(profile.fieldOfStudy),
-  ];
-
-  return opportunities
-    .map((opportunity) => {
-      const type = normalizeText(opportunity.type);
-      const tags = normalizeArray(opportunity.tags);
-      let score = 0;
-
-      if (preferredTypes.has(type)) score += 4;
-      if (profileTypes.has(type)) score += 3;
-      score += overlaps(tags, careerTags).length * 2;
-      score += overlaps(tags, profileSignals).length;
-      if (opportunity.location === profile.preferredLocation) score += 1;
-
-      return { opportunity, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .map((item) => item.opportunity)
-    .slice(0, 4);
-}
-
 export const generatePlan = async (req, res) => {
   try {
-    const [careers, opportunities, schools, programs] = await Promise.all([
+    const [careers, schools, programs] = await Promise.all([
       readJson("../data/careers.json"),
-      readJson("../data/oportunities.json", []),
       readJson("../data/knowledge/morocco-universities.json", []),
       readJson("../data/knowledge/morocco-programs.json", []),
     ]);
@@ -133,13 +94,15 @@ export const generatePlan = async (req, res) => {
       careers[0];
 
     const profile = buildProfile(req.body || {}, career);
-    const recommendedOpportunities = rankOpportunities(opportunities, career, profile);
-    const { studyOptions, retrievalTrace } = selectStudyPrograms({
+    const [{ opportunities: recommendedOpportunities, retrievalTrace: opportunityTrace }, { studyOptions, retrievalTrace }] = await Promise.all([
+      buildOpportunityRecommendations({ career, profile }),
+      selectStudyPrograms({
       programs,
       fallbackSchools: schools,
       career,
       profile,
-    });
+      }),
+    ]);
 
     res.json({
       profile,
@@ -158,6 +121,7 @@ export const generatePlan = async (req, res) => {
         `PlanAgent: matched ${recommendedOpportunities.length} opportunities`,
         `PlanAgent: matched ${studyOptions.length} study options`,
         ...retrievalTrace,
+        ...opportunityTrace,
       ],
     });
   } catch (error) {

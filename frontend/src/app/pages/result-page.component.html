@@ -252,11 +252,21 @@
                     "
                   >
                     <span class="opportunity-card__type">
-                      {{ opportunity.type }}
+                      {{ opportunity.type }} · {{ getOpportunitySourceLabel(opportunity) }}
                     </span>
                     <h4 class="opportunity-card__title">{{ opportunity.title }}</h4>
-                    <p class="opportunity-card__meta">{{ opportunity.location }}</p>
-                    <p class="opportunity-card__description">{{ opportunity.description }}</p>
+                    <p class="opportunity-card__meta">
+                      {{ opportunity.provider }} · {{ opportunity.location }}
+                    </p>
+                    <p class="opportunity-card__description">{{ opportunity.summary }}</p>
+                    <p class="opportunity-card__description" *ngIf="opportunity.whyRelevant">
+                      {{ opportunity.whyRelevant }}
+                    </p>
+                    <p class="opportunity-card__description" *ngIf="opportunity.sourceUrl">
+                      <a [href]="opportunity.sourceUrl" target="_blank" rel="noreferrer">
+                        View source
+                      </a>
+                    </p>
                   </article>
                 </div>
               </aside>

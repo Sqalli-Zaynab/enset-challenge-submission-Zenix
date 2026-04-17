@@ -207,9 +207,25 @@
           >
             <span>
               <strong>{{ opportunity.title }}</strong>
-              <em>{{ opportunity.description }}</em>
+              <em>{{ opportunity.provider }} · {{ opportunity.summary }}</em>
+              <em class="interview-study-row__reason" *ngIf="opportunity.whyRelevant">
+                {{ opportunity.whyRelevant }}
+              </em>
             </span>
-            <small>{{ opportunity.type }} - {{ opportunity.location }}</small>
+            <div class="interview-study-row__actions">
+              <small>
+                {{ opportunity.type }} · {{ opportunity.location }} · {{ getOpportunitySourceLabel(opportunity) }}
+              </small>
+              <a
+                *ngIf="opportunity.sourceUrl"
+                class="interview-program-link"
+                [href]="opportunity.sourceUrl"
+                target="_blank"
+                rel="noreferrer"
+              >
+                View source
+              </a>
+            </div>
           </article>
         </section>
 

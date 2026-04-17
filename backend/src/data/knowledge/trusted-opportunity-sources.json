@@ -1,0 +1,32 @@
+[
+  {
+    "id": "mlh-events",
+    "label": "MLH Events",
+    "provider": "Major League Hacking",
+    "url": "https://www.mlh.com/seasons/2026/events",
+    "domain": "mlh.com",
+    "defaultType": "hackathon",
+    "trustScore": 10,
+    "tags": ["hackathon", "student", "builder", "teamwork", "projects"]
+  },
+  {
+    "id": "devpost",
+    "label": "Devpost",
+    "provider": "Devpost",
+    "url": "https://devpost.com/",
+    "domain": "devpost.com",
+    "defaultType": "challenge",
+    "trustScore": 9,
+    "tags": ["hackathon", "challenge", "portfolio", "student", "prototype"]
+  },
+  {
+    "id": "stage-ma",
+    "label": "stage.ma",
+    "provider": "stage.ma",
+    "url": "https://stage.ma",
+    "domain": "stage.ma",
+    "defaultType": "internship",
+    "trustScore": 8,
+    "tags": ["internship", "career-entry", "morocco", "students", "experience"]
+  }
+]

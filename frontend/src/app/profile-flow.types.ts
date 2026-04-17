@@ -112,12 +112,20 @@ export interface CareerRecommendations {
 }
 
 export interface OpportunityItem {
-  id: number;
+  id: string;
   title: string;
   type: string;
+  provider: string;
+  sourceUrl: string;
   location: string;
-  tags: string[];
-  description: string;
+  mode: string;
+  deadline: string | null;
+  careerTargets: string[];
+  skills: string[];
+  eligibility: string[];
+  summary: string;
+  whyRelevant: string;
+  sourceType: 'trusted-rag' | 'fallback-local';
 }
 
 export interface StudyOption {

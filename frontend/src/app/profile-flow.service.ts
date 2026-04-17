@@ -877,18 +877,29 @@ export class ProfileFlowService {
 
     const data: any = value;
 
-    if (typeof data.id !== 'number') {
+    if (typeof data.id !== 'string' && typeof data.id !== 'number') {
       return null;
     }
 
     return {
-      id: data.id,
+      id: String(data.id),
       title: typeof data.title === 'string' ? data.title : '',
       type: typeof data.type === 'string' ? data.type : '',
+      provider: typeof data.provider === 'string' ? data.provider : '',
+      sourceUrl: typeof data.sourceUrl === 'string' ? data.sourceUrl : '',
       location: typeof data.location === 'string' ? data.location : '',
-      tags: this.ensureStringArray(data.tags),
-      description:
-        typeof data.description === 'string' ? data.description : '',
+      mode: typeof data.mode === 'string' ? data.mode : 'hybrid',
+      deadline:
+        typeof data.deadline === 'string' && data.deadline.trim()
+          ? data.deadline
+          : null,
+      careerTargets: this.ensureStringArray(data.careerTargets),
+      skills: this.ensureStringArray(data.skills),
+      eligibility: this.ensureStringArray(data.eligibility),
+      summary: typeof data.summary === 'string' ? data.summary : '',
+      whyRelevant: typeof data.whyRelevant === 'string' ? data.whyRelevant : '',
+      sourceType:
+        data.sourceType === 'trusted-rag' ? 'trusted-rag' : 'fallback-local',
     };
   }
 

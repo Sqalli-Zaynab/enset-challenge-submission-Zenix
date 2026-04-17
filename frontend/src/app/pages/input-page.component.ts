@@ -405,12 +405,16 @@ export class InputPageComponent {
     return option.id ?? `${option.school}-${option.program}`;
   }
 
-  trackByOpportunity(_: number, opportunity: OpportunityItem): number {
+  trackByOpportunity(_: number, opportunity: OpportunityItem): string {
     return opportunity.id;
   }
 
   trackByAction(_: number, action: WorkflowAction): string {
     return action.id;
+  }
+
+  getOpportunitySourceLabel(opportunity: OpportunityItem): string {
+    return opportunity.sourceType === 'trusted-rag' ? 'trusted source' : 'curated fallback';
   }
 
   private async finishInterviewAndRecommend(): Promise<void> {

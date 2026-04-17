@@ -752,18 +752,13 @@ export class ResultPdfExportService {
         doc.setTextColor(...REPORT_THEME.muted);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
-        doc.text(opportunity.location, x + 35, rowY + 7);
+        doc.text(`${opportunity.provider} - ${opportunity.location}`, x + 35, rowY + 7);
 
-        const tags = opportunity.tags
-          .slice(0, 3)
-          .map((tag) => toTitleCase(tag));
-
-        if (tags.length) {
-          doc.text(tags.join(' - '), x + 35, rowY + 11.5);
-        } else if (opportunity.description) {
-          const descLines = doc.splitTextToSize(opportunity.description, w - 50);
-          doc.text(descLines.slice(0, 2), x + 35, rowY + 11.5);
-        }
+        const detailLines = doc.splitTextToSize(
+          [opportunity.whyRelevant, opportunity.sourceUrl].filter(Boolean).join(' - '),
+          w - 50,
+        );
+        doc.text(detailLines.slice(0, 2), x + 35, rowY + 11.5);
 
         if (rowY < y + h - 24) {
           doc.setDrawColor(...REPORT_THEME.border);

@@ -185,12 +185,16 @@ export class ResultPageComponent implements OnInit {
     return choice.id;
   }
 
-  trackByOpportunity(_: number, opportunity: OpportunityItem): number {
+  trackByOpportunity(_: number, opportunity: OpportunityItem): string {
     return opportunity.id;
   }
 
   trackByStudyOption(_: number, option: StudyOption): string {
     return option.id ?? `${option.school}-${option.program}`;
+  }
+
+  getOpportunitySourceLabel(opportunity: OpportunityItem): string {
+    return opportunity.sourceType === 'trusted-rag' ? 'trusted source' : 'curated fallback';
   }
 
   exportPlan(): void {
